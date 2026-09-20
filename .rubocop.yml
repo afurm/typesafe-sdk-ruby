@@ -1,0 +1,52 @@
+AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "vendor/**/*"
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+# The entry file must match the gem name for `require "typesafe-sdk-ruby"`.
+Naming/FileName:
+  Exclude:
+    - "lib/typesafe-sdk-ruby.rb"
+
+# The client mirrors the JS SDK's option surface; keyword options are intentional.
+Metrics/ParameterLists:
+  Max: 10
+
+Metrics/MethodLength:
+  Max: 45
+
+Metrics/AbcSize:
+  Max: 60
+
+Metrics/CyclomaticComplexity:
+  Max: 14
+
+Metrics/PerceivedComplexity:
+  Max: 14
+
+Metrics/ClassLength:
+  Max: 300
+
+Lint/ShadowedException:
+  Enabled: false
+
+Lint/BooleanSymbol:
+  Enabled: false
+
+Lint/ConstantDefinitionInBlock:
+  Exclude:
+    - "spec/**/*"
+
+Lint/EmptyBlock:
+  Exclude:
+    - "spec/**/*"
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "typesafe-sdk.gemspec"
