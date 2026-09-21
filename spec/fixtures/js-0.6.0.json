@@ -79,11 +79,135 @@
       "model": "jev-latest"
     }
   },
+  "result": {
+    "model": "jev-latest",
+    "answers": {
+      "yes": {
+        "type": "noul",
+        "noul": 0.08
+      },
+      "category": {
+        "type": "choice",
+        "choice": "billing",
+        "confidence": 0.5,
+        "probabilities": {
+          "billing": 0.8,
+          "other": 0.2
+        }
+      },
+      "rating": {
+        "type": "score",
+        "score": 1.35,
+        "confidence": 0.3,
+        "legend": {
+          "0": null,
+          "1": "medium",
+          "2": [
+            "high"
+          ]
+        },
+        "probabilities": {
+          "0": 0.1,
+          "1": 0.45,
+          "2": 0.45
+        }
+      }
+    },
+    "usage": {
+      "input_tokens": 23,
+      "output_tokens": 12
+    }
+  },
+  "retry_flags": [
+    {
+      "field": "respect_retry_after",
+      "value": null,
+      "resolved": true
+    },
+    {
+      "field": "respect_retry_after",
+      "value": false,
+      "resolved": false
+    },
+    {
+      "field": "respect_retry_after",
+      "value": true,
+      "resolved": true
+    },
+    {
+      "field": "api_connection_error",
+      "value": null,
+      "resolved": true
+    },
+    {
+      "field": "api_connection_error",
+      "value": false,
+      "resolved": false
+    },
+    {
+      "field": "api_connection_error",
+      "value": true,
+      "resolved": true
+    },
+    {
+      "field": "api_timeout_error",
+      "value": null,
+      "resolved": true
+    },
+    {
+      "field": "api_timeout_error",
+      "value": false,
+      "resolved": false
+    },
+    {
+      "field": "api_timeout_error",
+      "value": true,
+      "resolved": true
+    }
+  ],
   "response_metadata": {
     "status": 200,
     "request_id": "req-parity"
   },
   "errors": [
+    {
+      "status": 400,
+      "body": {
+        "error": ""
+      },
+      "name": "BadRequestError",
+      "message": "400 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 400,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "BadRequestError",
+      "message": "400 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 400,
+      "body": {
+        "message": ""
+      },
+      "name": "BadRequestError",
+      "message": "400 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 400,
+      "body": {
+        "detail": ""
+      },
+      "name": "BadRequestError",
+      "message": "400 {\"detail\":\"\"}",
+      "request_id": "req-error"
+    },
     {
       "status": 400,
       "body": {
@@ -118,6 +242,44 @@
       },
       "name": "BadRequestError",
       "message": "400 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "error": ""
+      },
+      "name": "AuthenticationError",
+      "message": "401 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "AuthenticationError",
+      "message": "401 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "message": ""
+      },
+      "name": "AuthenticationError",
+      "message": "401 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "detail": ""
+      },
+      "name": "AuthenticationError",
+      "message": "401 {\"detail\":\"\"}",
       "request_id": "req-error"
     },
     {
@@ -159,6 +321,44 @@
     {
       "status": 403,
       "body": {
+        "error": ""
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
+        "message": ""
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
+        "detail": ""
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 {\"detail\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
         "error": "failure"
       },
       "name": "PermissionDeniedError",
@@ -190,6 +390,44 @@
       },
       "name": "PermissionDeniedError",
       "message": "403 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "error": ""
+      },
+      "name": "NotFoundError",
+      "message": "404 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "NotFoundError",
+      "message": "404 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "message": ""
+      },
+      "name": "NotFoundError",
+      "message": "404 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "detail": ""
+      },
+      "name": "NotFoundError",
+      "message": "404 {\"detail\":\"\"}",
       "request_id": "req-error"
     },
     {
@@ -231,6 +469,44 @@
     {
       "status": 408,
       "body": {
+        "error": ""
+      },
+      "name": "APIError",
+      "message": "408 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "APIError",
+      "message": "408 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
+        "message": ""
+      },
+      "name": "APIError",
+      "message": "408 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
+        "detail": ""
+      },
+      "name": "APIError",
+      "message": "408 {\"detail\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
         "error": "failure"
       },
       "name": "APIError",
@@ -262,6 +538,44 @@
       },
       "name": "APIError",
       "message": "408 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "error": ""
+      },
+      "name": "APIError",
+      "message": "409 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "APIError",
+      "message": "409 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "message": ""
+      },
+      "name": "APIError",
+      "message": "409 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "detail": ""
+      },
+      "name": "APIError",
+      "message": "409 {\"detail\":\"\"}",
       "request_id": "req-error"
     },
     {
@@ -303,6 +617,44 @@
     {
       "status": 422,
       "body": {
+        "error": ""
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
+        "message": ""
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": ""
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 {\"detail\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
         "error": "failure"
       },
       "name": "UnprocessableEntityError",
@@ -335,6 +687,48 @@
       "name": "UnprocessableEntityError",
       "message": "422 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
       "request_id": "req-error"
+    },
+    {
+      "status": 429,
+      "body": {
+        "error": ""
+      },
+      "name": "RateLimitError",
+      "message": "429 {\"error\":\"\"}",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
+    },
+    {
+      "status": 429,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "RateLimitError",
+      "message": "429 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
+    },
+    {
+      "status": 429,
+      "body": {
+        "message": ""
+      },
+      "name": "RateLimitError",
+      "message": "429 {\"message\":\"\"}",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
+    },
+    {
+      "status": 429,
+      "body": {
+        "detail": ""
+      },
+      "name": "RateLimitError",
+      "message": "429 {\"detail\":\"\"}",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
     },
     {
       "status": 429,
@@ -378,6 +772,44 @@
     {
       "status": 500,
       "body": {
+        "error": ""
+      },
+      "name": "InternalServerError",
+      "message": "500 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 500,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "InternalServerError",
+      "message": "500 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 500,
+      "body": {
+        "message": ""
+      },
+      "name": "InternalServerError",
+      "message": "500 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 500,
+      "body": {
+        "detail": ""
+      },
+      "name": "InternalServerError",
+      "message": "500 {\"detail\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 500,
+      "body": {
         "error": "failure"
       },
       "name": "InternalServerError",
@@ -414,6 +846,44 @@
     {
       "status": 503,
       "body": {
+        "error": ""
+      },
+      "name": "InternalServerError",
+      "message": "503 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "InternalServerError",
+      "message": "503 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
+        "message": ""
+      },
+      "name": "InternalServerError",
+      "message": "503 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
+        "detail": ""
+      },
+      "name": "InternalServerError",
+      "message": "503 {\"detail\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
         "error": "failure"
       },
       "name": "InternalServerError",
@@ -445,6 +915,44 @@
       },
       "name": "InternalServerError",
       "message": "503 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "error": ""
+      },
+      "name": "InternalServerError",
+      "message": "599 {\"error\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "error": {
+          "message": ""
+        }
+      },
+      "name": "InternalServerError",
+      "message": "599 {\"error\":{\"message\":\"\"}}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "message": ""
+      },
+      "name": "InternalServerError",
+      "message": "599 {\"message\":\"\"}",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "detail": ""
+      },
+      "name": "InternalServerError",
+      "message": "599 {\"detail\":\"\"}",
       "request_id": "req-error"
     },
     {

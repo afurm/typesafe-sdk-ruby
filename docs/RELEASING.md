@@ -22,7 +22,8 @@ of compatibility.
 
 1. Review and merge the release pull request after all CI matrix jobs pass.
 2. Run the opt-in live smoke test described in [COMPATIBILITY.md](COMPATIBILITY.md).
-3. Set the changelog release date in a reviewed pull request before tagging.
+3. Set the changelog release date and update the README release-status notice in a reviewed
+   pull request before tagging.
 4. On the merged main commit, run `bundle exec rake`, `ruby script/check_release.rb`, and
    `gem build typesafe-sdk-ruby.gemspec --strict`.
 5. Create and push the matching annotated tag, for example `v0.6.0.1`.

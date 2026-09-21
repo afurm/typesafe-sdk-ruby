@@ -14,7 +14,7 @@ responsibly:
 1. **Do not open a public GitHub issue** for security vulnerabilities.
 2. Use GitHub's private vulnerability reporting:
    **Security → Report a vulnerability** at
-   https://github.com/afurm/typesafe-sdk-ruby/security/advisories/new
+   [Open a private report](https://github.com/afurm/typesafe-sdk-ruby/security/advisories/new).
 3. Include a description of the issue, steps to reproduce, and the affected
    version(s).
 

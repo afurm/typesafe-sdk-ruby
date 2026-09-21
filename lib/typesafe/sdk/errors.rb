@@ -35,7 +35,7 @@ module Typesafe
 
       def self.describe(status, body)
         detail = extract_message(body)
-        return "#{status} #{detail}" if detail
+        return "#{status} #{detail}" if detail && !detail.empty?
         return "#{status} status code (no body)" if body.nil?
 
         raw = body.is_a?(String) ? body : JSON.generate(body)

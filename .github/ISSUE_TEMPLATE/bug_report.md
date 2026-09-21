@@ -11,6 +11,8 @@ A clear and concise description of the problem.
 
 - Gem version:
 - Ruby version (`ruby -v`):
+- Default or custom HTTP adapter:
+- Request ID (if available):
 
 **Reproduction**
 Minimal code that reproduces the issue. Do **not** include your API key.
@@ -24,4 +26,6 @@ Minimal code that reproduces the issue. Do **not** include your API key.
 **Actual behavior**
 
 **Additional context**
-Logs (with `log_level: :debug`, credentials redacted), stack traces, etc.
+Sanitized logs, stack traces, etc. Debug mode redacts known credential headers, but
+request/response bodies and custom headers may contain secrets or customer data. Review
+and remove sensitive content before sharing.
