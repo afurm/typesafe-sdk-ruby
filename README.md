@@ -17,7 +17,8 @@ It targets the official [JavaScript SDK](https://github.com/typesafe-ai/typesafe
 by TypeSafe AI.
 
 **Release status:** this README follows `main`. Ruby **0.6.0.1** is currently unreleased;
-its transport fixes, `with_response:`, and `extra_body:` are not in the published 0.6.0 gem.
+its fixes, stricter validation, new error classes, `with_response:`, and `extra_body:`
+are not in the published 0.6.0 gem.
 See the [changelog](CHANGELOG.md) and [releases](https://github.com/afurm/typesafe-sdk-ruby/releases).
 Ruby-only corrections add a fourth version component: `0.6.0.1` still targets JS `0.6.0`.
 
@@ -120,6 +121,19 @@ question = Typesafe::SDK.noul("Is this an explicit cancellation request?", crite
 
 See [structured questions](https://docs.typesafe.ai/primitives/advanced) for more examples.
 
+From Ruby **0.6.0.1**, builders and raw question hashes are checked before sending:
+
+- State must be a string, object, or array; `nil` is rejected, while `""`, `{}`, and `[]` are allowed.
+- Noul needs instructions or at least one non-nil true/false outcome description.
+- Score needs **2–10** levels. A nil level is rejected; use `""` explicitly to keep an
+  undescribed position. The SDK never drops or renumbers levels.
+- Choice needs **1–255** options. Nil descriptions remain valid for choice labels.
+- Question names must not be empty strings.
+
+Failures raise `Typesafe::SDK::TypeSafeError` without an HTTP request. These checks address
+request shapes reported as rejected by the API, even though JS 0.6.0 accepts them locally.
+See the [upstream issue audit](docs/UPSTREAM_ISSUES.md) for evidence and limitations.
+
 ## Using confidence
 
 Choice and Score include confidence derived from their probability distributions. Confidence
@@ -136,7 +150,10 @@ puts(category.confidence >= threshold ? "Route to #{category.choice}" : "Needs r
 ## Configuration
 
 Explicit options take precedence over environment variables, then SDK defaults.
-Blank environment values are ignored.
+Blank environment values are ignored for optional settings. An API key is required.
+From Ruby 0.6.0.1, outer spaces, tabs, and line endings are trimmed from keys; blank keys,
+non-ASCII text, embedded whitespace, and control characters raise `TypeSafeError` at
+construction. Error messages do not include the key.
 
 | Option | Environment variable | Default |
 | --- | --- | --- |
@@ -163,7 +180,9 @@ client = Typesafe::SDK::Client.new(
 By default, the SDK retries HTTP 408, 429, and 5xx responses, connection failures, and timeouts,
 with up to two retries after the initial attempt. Backoff starts at 500 ms, doubles up to
 5,000 ms, and uses up to 25% downward jitter. Server `Retry-After` and `retry-after-ms` delays
-are honored up to 60,000 ms; larger delays fall back to backoff.
+are honored up to 60,000 ms; larger delays fall back to backoff. From Ruby 0.6.0.1, blank
+or malformed delay headers also fall back to backoff; an explicit zero remains valid.
+A blank `retry-after-ms` still permits a valid `Retry-After` header to be used.
 
 Each attempt receives a fresh timeout, so total call time can include several attempts and
 backoff. Override settings per client or per call:
@@ -206,8 +225,11 @@ Errors reach your code after any configured retries. All SDK errors inherit from
 | --- | --- |
 | `BadRequestError` | HTTP 400 |
 | `AuthenticationError` | HTTP 401 |
+| `PaymentRequiredError` | HTTP 402; added in 0.6.0.1 |
 | `PermissionDeniedError` | HTTP 403 |
 | `NotFoundError` | HTTP 404 |
+| `ConflictError` | HTTP 409; added in 0.6.0.1 |
+| `PayloadTooLargeError` | HTTP 413; added in 0.6.0.1 |
 | `UnprocessableEntityError` | HTTP 422 |
 | `RateLimitError` | HTTP 429; exposes `retry_after_ms` |
 | `InternalServerError` | HTTP 5xx |

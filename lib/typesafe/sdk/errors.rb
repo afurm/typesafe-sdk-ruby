@@ -56,8 +56,11 @@ module Typesafe
         @status_classes ||= {
           400 => Typesafe::SDK::BadRequestError,
           401 => Typesafe::SDK::AuthenticationError,
+          402 => Typesafe::SDK::PaymentRequiredError,
           403 => Typesafe::SDK::PermissionDeniedError,
           404 => Typesafe::SDK::NotFoundError,
+          409 => Typesafe::SDK::ConflictError,
+          413 => Typesafe::SDK::PayloadTooLargeError,
           422 => Typesafe::SDK::UnprocessableEntityError,
           429 => Typesafe::SDK::RateLimitError
         }.freeze
@@ -94,10 +97,16 @@ module Typesafe
     class BadRequestError < APIError; end
     # HTTP 401: authentication failed.
     class AuthenticationError < APIError; end
+    # HTTP 402: payment is required.
+    class PaymentRequiredError < APIError; end
     # HTTP 403: access is denied.
     class PermissionDeniedError < APIError; end
     # HTTP 404: the resource was not found.
     class NotFoundError < APIError; end
+    # HTTP 409: the request conflicts with the current state.
+    class ConflictError < APIError; end
+    # HTTP 413: the request payload is too large.
+    class PayloadTooLargeError < APIError; end
     # HTTP 422: request validation failed.
     class UnprocessableEntityError < APIError; end
 

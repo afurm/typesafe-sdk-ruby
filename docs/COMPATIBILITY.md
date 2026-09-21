@@ -11,7 +11,7 @@ or a guarantee about future API changes.
 | --- | --- |
 | Endpoints | `POST /v1/systemone`, `GET /v1/models` |
 | Defaults | `jev-latest`, 10-second attempt timeout, two retries |
-| Questions | Noul, choice, ordered score criteria; structured instructions/state and null values |
+| Questions | Noul, choice, ordered score criteria; structured instructions/state and nullable choice descriptions |
 | Configuration | Explicit settings override trimmed environment values |
 | Retries | 408, 429, 500–599; connection and timeout failures independently configurable |
 | Server delays | Fractional milliseconds/seconds, HTTP dates, maximum delay and jitter |
@@ -27,6 +27,9 @@ JavaScript package, rather than by copying expected output from the Ruby impleme
 complete answer fields (including fractional scores and string rubric keys), retry header
 parsing, and nullable retry flags. `http_spec.rb` uses real loopback sockets to exercise behavior
 that mocked HTTP adapters cannot verify. Other specs cover Ruby configuration and logging.
+Known upstream bugs are corrected explicitly in the comparisons; the fixtures retain the
+original JS behavior for those cases.
+See the [issue-by-issue audit](UPSTREAM_ISSUES.md) for every upstream issue reviewed.
 
 To regenerate the fixtures, download the official release asset from
 [GitHub](https://github.com/typesafe-ai/typesafe-sdk-js/releases/tag/v0.6.0), unpack it, and run:
@@ -38,6 +41,16 @@ bundle exec rake
 
 ## Intentional Ruby differences and limits
 
+- Ruby 0.6.0.1 validates API keys without echoing their contents and rejects reported
+  API-invalid state/question shapes locally. Score levels must be non-nil and number 2–10;
+  choice options must number 1–255; noul requires instructions or an outcome description;
+  state must be a string, object, or array; question names cannot be empty.
+  Builders and raw question hashes use the same checks. This intentionally tightens the
+  permissive JS 0.6.0 behavior; local validation is not a complete server schema validator.
+- Blank retry headers fall back to configured backoff (or another valid delay header).
+  JS 0.6.0 incorrectly treats blanks as zero. Literal zero remains valid in Ruby.
+- HTTP 402, 409, and 413 have `PaymentRequiredError`, `ConflictError`, and
+  `PayloadTooLargeError` subclasses. Existing `APIError` rescue clauses still catch them.
 - Methods/options use snake_case. `timeout:` is in **seconds**; retry settings ending in
   `_ms` remain milliseconds. `retry_policy:` corresponds to JavaScript's `retry` option.
 - Calls are synchronous. There is no JavaScript `Promise`, `AbortController`, or compile-time

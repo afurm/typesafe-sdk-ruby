@@ -4,10 +4,8 @@ require "spec_helper"
 
 RSpec.describe Typesafe::SDK::Questions do
   describe ".noul" do
-    it "builds a noul question with defaults" do
-      expect(described_class.noul).to eq(
-        type: "noul", instructions: nil, criteria: nil
-      )
+    it "requires instructions or criteria" do
+      expect { described_class.noul }.to raise_error(Typesafe::SDK::TypeSafeError, /instructions or criteria/)
     end
 
     it "accepts instructions and criteria" do

@@ -9,7 +9,7 @@ const sdk = require(path.join(root, 'dist/index.cjs'));
   const questions = {
     yes: sdk.noul('Is it urgent?', {true: 'urgent', false: 'routine'}),
     category: sdk.choice(null, {billing: null, other: {description: 'other'}}),
-    rating: sdk.score('Priority?', [null, 'medium', ['high']]),
+    rating: sdk.score('Priority?', ['low', 'medium', ['high']]),
   };
   const wireResult = {
     model: 'jev-latest',
@@ -18,7 +18,7 @@ const sdk = require(path.join(root, 'dist/index.cjs'));
       category: {type: 'choice', choice: 'billing', confidence: 0.5,
         probabilities: {billing: 0.8, other: 0.2}},
       rating: {type: 'score', score: 1.35, confidence: 0.3,
-        legend: {'0': null, '1': 'medium', '2': ['high']},
+        legend: {'0': 'low', '1': 'medium', '2': ['high']},
         probabilities: {'0': 0.1, '1': 0.45, '2': 0.45}},
     },
     usage: {input_tokens: 23, output_tokens: 12},

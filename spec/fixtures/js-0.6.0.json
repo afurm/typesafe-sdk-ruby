@@ -26,7 +26,7 @@
       "type": "score",
       "instructions": "Priority?",
       "criteria": [
-        null,
+        "low",
         "medium",
         [
           "high"
@@ -64,7 +64,7 @@
           "type": "score",
           "instructions": "Priority?",
           "criteria": [
-            null,
+            "low",
             "medium",
             [
               "high"
@@ -100,7 +100,7 @@
         "score": 1.35,
         "confidence": 0.3,
         "legend": {
-          "0": null,
+          "0": "low",
           "1": "medium",
           "2": [
             "high"

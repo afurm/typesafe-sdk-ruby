@@ -38,14 +38,14 @@ module Typesafe
         return nil unless headers.respond_to?(:[])
 
         if (ms = headers["retry-after-ms"])
-          parsed = ms.to_s.strip.empty? ? 0.0 : Float(ms, exception: false)
+          parsed = Float(ms, exception: false) unless ms.to_s.strip.empty?
           return parsed if parsed&.finite? && parsed >= 0
         end
 
         raw = headers["retry-after"]
-        return nil if raw.nil?
+        return nil if raw.nil? || raw.to_s.strip.empty?
 
-        seconds = raw.to_s.strip.empty? ? 0.0 : Float(raw, exception: false)
+        seconds = Float(raw, exception: false)
         return seconds >= 0 ? seconds * 1000 : nil if seconds&.finite?
 
         date = begin
