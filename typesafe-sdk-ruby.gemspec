@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
+require_relative "lib/typesafe/sdk/version"
+
 Gem::Specification.new do |spec|
   spec.name = "typesafe-sdk-ruby"
-  spec.version = "0.6.0"
+  spec.version = Typesafe::SDK::VERSION
   spec.authors = ["TypeSafe Ruby SDK Contributors"]
-  spec.email = ["opensource@typesafe.ai"]
 
   spec.summary = "Unofficial Ruby SDK for the TypeSafe AI API (Jev model)"
   spec.description = <<~DESC.strip
@@ -17,16 +18,15 @@ Gem::Specification.new do |spec|
   spec.metadata = {
     "bug_tracker_uri" => "https://github.com/afurm/typesafe-sdk-ruby/issues",
     "changelog_uri" => "https://github.com/afurm/typesafe-sdk-ruby/blob/main/CHANGELOG.md",
-    "documentation_uri" => "https://docs.typesafe.ai/",
-    "homepage_uri" => "https://github.com/afurm/typesafe-sdk-ruby",
+    "documentation_uri" => "https://github.com/afurm/typesafe-sdk-ruby#readme",
     "rubygems_mfa_required" => "true",
     "source_code_uri" => "https://github.com/afurm/typesafe-sdk-ruby"
   }
 
   spec.required_ruby_version = ">= 3.1"
 
-  spec.files = Dir["lib/**/*.rb", "LICENSE", "README.md", "CHANGELOG.md"].sort
+  spec.files = Dir["lib/**/*.rb", "LICENSE", "README.md", "CHANGELOG.md", "docs/**/*.md"].sort
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "json", ">= 2.7"
+  spec.add_dependency "json", ">= 2.7", "< 3"
 end

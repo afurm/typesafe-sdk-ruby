@@ -59,8 +59,10 @@ module Typesafe
       # @param state [String, Hash, Array, nil] the content to evaluate.
       # @param questions [Hash{Symbol, String => Hash}] nonempty questions keyed by name.
       # @param model [String, nil] model override; omitted values inherit `default_model`.
-      # @param options [Hash] per-call `timeout`, `retry`, `headers`, and `signal` settings.
-      # @return [SystemOneResult] answers keyed by question name, with model and token usage.
+      # @param extra_body [Hash] additional JSON fields; named request arguments take precedence.
+      # @param with_response [Boolean] return data with HTTP metadata and request ID.
+      # @param options [Hash] per-call `timeout`, `retry_policy`, `headers`, and `signal` settings.
+      # @return [SystemOneResult, WithResponse] answers keyed by question name, with model and token usage.
       # @raise [TypeSafeError] questions are empty, or score criteria are not a list of at
       #   least two entries.
       # @raise [APIError] the server returns a non-2xx response after retries.
@@ -72,17 +74,20 @@ module Typesafe
       #     state: "I was charged twice. Please help.",
       #     questions: { billing: Typesafe::SDK.noul("Is this about billing?") },
       #   )
-      #   response.answers[:billing].noul # => 0.93
-      def system_one(state:, questions:, model: nil, **options)
+      #   response[:billing].noul # => 0.93
+      def system_one(state:, questions:, model: nil, extra_body: {}, with_response: false, **options)
         Questions.validate!(questions)
-        body = { state: state, questions: questions, model: model || @default_model }
+        body = extra_body.transform_keys(&:to_s).merge(
+          "state" => state, "questions" => questions, "model" => model || @default_model
+        )
         response = request(:post, "/v1/systemone", body: body, **options)
-        SystemOneResult.new(response.body)
+        result = SystemOneResult.new(response.body)
+        with_response ? WithResponse.new(result, response) : result
       end
 
       # Send a request and parse its response body. Internal; used by API resources.
       #
-      # @return [Response] the parsed response, with `data`, `status`, `headers`, and `request_id`.
+      # @return [Response] the parsed response, with `body`, `status`, `headers`, and `request_id`.
       def request(method, path, body: nil, headers: {}, timeout: nil, retry_policy: nil,
                   signal: nil)
         resolved = {
@@ -121,7 +126,7 @@ module Typesafe
       end
 
       def assert_positive(name, value)
-        unless value.is_a?(Numeric) && value.positive?
+        unless value.is_a?(Numeric) && value.real? && value.finite? && value.positive?
           raise TypeSafeError,
                 "`#{name}` must be a positive number, got #{value.inspect}."
         end
@@ -138,7 +143,7 @@ module Typesafe
       end
 
       def assert_non_negative(name, value)
-        unless value.is_a?(Numeric) && value >= 0
+        unless value.is_a?(Numeric) && value.real? && value.finite? && value >= 0
           raise TypeSafeError, "`#{name}` must be a non-negative number, got #{value.inspect}."
         end
 
@@ -146,7 +151,7 @@ module Typesafe
       end
 
       def assert_fraction(name, value)
-        unless value.is_a?(Numeric) && value >= 0 && value <= 1
+        unless value.is_a?(Numeric) && value.real? && value.finite? && value >= 0 && value <= 1
           raise TypeSafeError, "`#{name}` must be between 0 and 1, got #{value.inspect}."
         end
 
@@ -159,7 +164,7 @@ module Typesafe
             raise TypeSafeError, "`#{name}` must contain HTTP status codes, got #{status.inspect}."
           end
         end
-        statuses
+        statuses.freeze
       end
 
       # Merge and validate retry overrides, copying the status list to isolate later mutations.
@@ -312,9 +317,9 @@ module Typesafe
         sleep_with_signal(delay, req[:signal])
       end
 
-      def sleep_with_signal(seconds, signal)
+      def sleep_with_signal(milliseconds, signal)
         signal&.check!
-        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + (seconds / 1000.0)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + (milliseconds / 1000.0)
         loop do
           if signal
             signal.check!

@@ -5,6 +5,7 @@ source "https://rubygems.org"
 gemspec
 
 group :development, :test do
+  gem "logger", require: false
   gem "rake"
   gem "rspec", "~> 3.13"
   gem "rubocop", require: false

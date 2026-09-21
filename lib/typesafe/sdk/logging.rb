@@ -64,7 +64,11 @@ module Typesafe
         define_method(severity) do |message, **data|
           return if LogLevel::RANK.fetch(severity) < @rank
 
-          @sink.public_send(severity, message, **data)
+          if data.empty? || @sink.method(severity).parameters.any? { |kind, _| %i[key keyreq keyrest].include?(kind) }
+            @sink.public_send(severity, message, **data)
+          else
+            @sink.public_send(severity, "#{message} #{data.map { |k, v| "#{k}=#{v.inspect}" }.join(' ')}")
+          end
         end
       end
     end

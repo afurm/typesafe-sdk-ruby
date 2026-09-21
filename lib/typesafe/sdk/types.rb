@@ -2,6 +2,17 @@
 
 module Typesafe
   module SDK
+    # Parsed data together with HTTP metadata, like the JS SDK withResponse() result.
+    class WithResponse
+      attr_reader :data, :response, :request_id
+
+      def initialize(data, response)
+        @data = data
+        @response = response
+        @request_id = response.request_id
+      end
+    end
+
     # Token usage for a request.
     class Usage
       attr_reader :input_tokens, :output_tokens

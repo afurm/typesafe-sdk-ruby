@@ -45,9 +45,9 @@ module Typesafe
         raise TypeSafeError, "At least one question is required." if questions.empty?
 
         questions.each do |name, question|
-          next unless question.is_a?(Hash) && question[:type] == "score"
+          next unless question.is_a?(Hash) && (question[:type] || question["type"]) == "score"
 
-          criteria = question[:criteria]
+          criteria = question.key?(:criteria) ? question[:criteria] : question["criteria"]
           unless criteria.is_a?(Array)
             raise TypeSafeError,
                   "Score question \"#{name}\" has criteria that are not a list; " \

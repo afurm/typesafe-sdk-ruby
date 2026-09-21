@@ -12,8 +12,10 @@ score questions — with retries, timeouts, structured logging, and typed errors
 > community port of the official [JavaScript SDK](https://github.com/typesafe-ai/typesafe-sdk-js).
 > Official SDKs: [JavaScript](https://github.com/typesafe-ai/typesafe-sdk-js) and Python.
 
-> **Versioning:** gem versions intentionally mirror the official JavaScript SDK so it is
-> obvious which upstream release each port tracks (e.g. gem 0.6.0 ≈ JS SDK 0.6.0).
+> **Compatibility:** targets official JS SDK **0.6.0**. New upstream ports use the same
+> version; Ruby-only fixes add a fourth number (e.g. `0.6.0.1` still targets JS `0.6.0`).
+> See the [compatibility tests and differences](docs/COMPATIBILITY.md) and
+> [release process](docs/RELEASING.md).
 
 ## Requirements
 
@@ -92,7 +94,9 @@ client = Typesafe::SDK::Client.new(
 
 The SDK retries HTTP `408`, `429`, and `5xx` responses plus connection failures and timeouts,
 with capped exponential backoff and jitter. It honors `Retry-After` and `retry-after-ms`
-headers up to a cap. Every option is overridable per client or per call:
+headers up to a cap. A timeout covers the full attempt, including connection setup and body
+receipt. Retries each receive a fresh timeout; total call time can include multiple attempts
+and backoff. Every option is overridable per client or per call:
 
 ```ruby
 client.system_one(
@@ -103,13 +107,31 @@ client.system_one(
 )
 ```
 
+## Response metadata and additional API fields
+
+```ruby
+result = client.system_one(
+  state: "A refund request",
+  questions: { billing: Typesafe::SDK.noul("Is this about billing?") },
+  with_response: true,
+)
+puts result.data[:billing].noul
+puts result.request_id
+puts result.response.status
+```
+
+`client.models.list(with_response: true)` provides the same wrapper around model cards.
+Responses expose case-insensitive `headers` and a parsed `body`. To forward future API fields,
+pass `extra_body: { new_option: nil }`; named `state`, `questions`, and `model` arguments win.
+The API decides whether an additional field is supported.
+
 ## Error handling
 
 ```ruby
 begin
   client.system_one(state: "...", questions: { ... })
 rescue Typesafe::SDK::RateLimitError => e
-  retry_after e.retry_after_ms
+  warn "Rate limited; server retry delay: #{e.retry_after_ms.inspect}ms"
 rescue Typesafe::SDK::APIError => e
   warn "API error #{e.status} (request #{e.request_id}): #{e.body}"
 end
@@ -133,7 +155,7 @@ signal = Typesafe::SDK::Signal.new
 Thread.new { sleep 5; signal.cancel }
 
 client.system_one(state: "...", questions: { ... }, signal: signal)
-# raises Typesafe::SDK::APIUserAbortError once canceled
+# raises Typesafe::SDK::APIUserAbortError when canceled, including during connection setup, body receipt, or retry backoff
 ```
 
 ## Listing models
@@ -146,9 +168,11 @@ end
 
 ## Logging
 
-The default logger writes to `$stderr` with a `[typesafe-sdk-ruby]` prefix. `info` logs request
+The default logger writes to `$stderr` with a `[typesafe-ai]` prefix. `info` logs request
 summaries; `debug` adds headers (credentials redacted) and bodies. Pass any object responding
-to `debug`/`info`/`warn`/`error`:
+to `debug`/`info`/`warn`/`error`. Standard Ruby `Logger` and `Rails.logger` are supported;
+loggers accepting keyword arguments receive structured data. Debug bodies may contain your
+application data, so use debug logging only where that is appropriate:
 
 ```ruby
 client = Typesafe::SDK::Client.new(logger: Rails.logger, log_level: :info)

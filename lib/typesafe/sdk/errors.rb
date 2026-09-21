@@ -103,9 +103,12 @@ module Typesafe
 
     # HTTP 429: the rate limit was exceeded.
     class RateLimitError < APIError
-      # Server retry delay in milliseconds, or `nil` when absent or invalid.
-      def retry_after_ms
-        Typesafe::SDK::Retry.parse_retry_after(@headers)
+      # Captured at response time, so HTTP-date delays do not change between reads.
+      attr_reader :retry_after_ms
+
+      def initialize(...)
+        super
+        @retry_after_ms = Typesafe::SDK::Retry.parse_retry_after(@headers)
       end
     end
 
