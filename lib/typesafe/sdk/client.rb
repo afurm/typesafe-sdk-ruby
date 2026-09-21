@@ -35,8 +35,7 @@ module Typesafe
       def initialize(api_key: nil, base_url: nil, default_model: nil, log_level: nil,
                      logger: nil, retry_policy: nil, timeout: nil, default_headers: nil,
                      http: nil, env: ::ENV)
-        @api_key = ENV.from_code_or_env(api_key, ENV::API_KEY, source: env)
-        raise TypeSafeError, missing_api_key_message if @api_key.nil? || @api_key.empty?
+        @api_key = validate_api_key(api_key.nil? ? env[ENV::API_KEY] : api_key)
 
         @base_url = strip_trailing_slashes(
           ENV.from_code_or_env(base_url, ENV::BASE_URL, source: env) || DEFAULT_BASE_URL
@@ -56,15 +55,14 @@ module Typesafe
 
       # Answer named questions about text or structured state.
       #
-      # @param state [String, Hash, Array, nil] the content to evaluate.
+      # @param state [String, Hash, Array] the content to evaluate.
       # @param questions [Hash{Symbol, String => Hash}] nonempty questions keyed by name.
       # @param model [String, nil] model override; omitted values inherit `default_model`.
       # @param extra_body [Hash] additional JSON fields; named request arguments take precedence.
       # @param with_response [Boolean] return data with HTTP metadata and request ID.
       # @param options [Hash] per-call `timeout`, `retry_policy`, `headers`, and `signal` settings.
       # @return [SystemOneResult, WithResponse] answers keyed by question name, with model and token usage.
-      # @raise [TypeSafeError] questions are empty, or score criteria are not a list of at
-      #   least two entries.
+      # @raise [TypeSafeError] state or questions violate the locally checked API constraints.
       # @raise [APIError] the server returns a non-2xx response after retries.
       # @raise [APIConnectionError] the request cannot connect or times out after retries.
       # @raise [APIUserAbortError] the caller cancels the request.
@@ -76,6 +74,7 @@ module Typesafe
       #   )
       #   response[:billing].noul # => 0.93
       def system_one(state:, questions:, model: nil, extra_body: {}, with_response: false, **options)
+        Questions.validate_state!(state)
         Questions.validate!(questions)
         body = extra_body.transform_keys(&:to_s).merge(
           "state" => state, "questions" => questions, "model" => model || @default_model
@@ -110,6 +109,21 @@ module Typesafe
       end
 
       private
+
+      def validate_api_key(value)
+        raise TypeSafeError, missing_api_key_message if value.nil?
+        unless value.is_a?(String) && value.valid_encoding? && value.ascii_only?
+          raise TypeSafeError, "API key must be an ASCII string."
+        end
+
+        key = value.gsub(/\A[ \t\r\n]+|[ \t\r\n]+\z/, "")
+        raise TypeSafeError, missing_api_key_message if key.empty?
+        if key.match?(/[\x00-\x20\x7f]/)
+          raise TypeSafeError, "API key must not contain whitespace or control characters."
+        end
+
+        key.freeze
+      end
 
       def missing_api_key_message
         "No API key was provided. Pass `api_key:` to Typesafe::SDK::Client.new or set the " \

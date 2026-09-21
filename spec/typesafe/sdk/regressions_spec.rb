@@ -45,7 +45,7 @@ RSpec.describe "Ruby SDK regressions" do
     client = Typesafe::SDK::Client.new(api_key: "k", http: http)
     expect(http).not_to receive(:request)
     expect do
-      client.system_one(state: nil, questions: { "rating" => { "type" => "score", "criteria" => ["one"] } })
+      client.system_one(state: "state", questions: { "rating" => { "type" => "score", "criteria" => ["one"] } })
     end.to raise_error(Typesafe::SDK::TypeSafeError, /at least two scores/)
   end
 

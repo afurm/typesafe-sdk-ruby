@@ -12,6 +12,15 @@ Compatibility target: official JavaScript SDK 0.6.0, commit `66880cc`.
 
 ### Fixed
 
+- Reject malformed/blank API keys at construction without including credentials in errors
+  (upstream #14); trim surrounding spaces and line endings.
+- Validate state types, meaningful noul questions, score/choice bounds, and empty question
+  names before HTTP requests (upstream #6).
+- Reject nil score levels without dropping or renumbering positions; document an explicit
+  empty string for an undescribed position (upstream #12).
+- Fall back to configured backoff for blank retry headers while preserving explicit zero
+  and valid alternate headers (upstream #9).
+
 - Match upstream fallback error messages when API error fields are empty strings.
 - Treat nil retry flags as inherited settings, while keeping explicit false overrides.
 - Enforce the timeout across the entire HTTP attempt, including slow response bodies.
@@ -24,6 +33,11 @@ Compatibility target: official JavaScript SDK 0.6.0, commit `66880cc`.
 - Preserve upstream license attribution and remove the misleading official-company contact.
 
 ### Added
+
+- `PaymentRequiredError` (402), `ConflictError` (409), and `PayloadTooLargeError` (413),
+  retaining `APIError` inheritance and existing retry defaults (upstream #13).
+- An audit of all 11 upstream issues, numeric-label coverage, subprocess cancellation checks,
+  and real-socket timeout tests around Node's timer limit (upstream #2, #4, #8).
 
 - Complete answer and nullable retry flag comparisons against the published JS package.
 - README onboarding, primitive/confidence examples, JS-to-Ruby mapping, and support routes.

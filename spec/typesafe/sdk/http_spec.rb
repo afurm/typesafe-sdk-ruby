@@ -88,6 +88,22 @@ RSpec.describe "Native HTTP reliability" do
     end
   end
 
+  [(2**31) - 1, 2**31].each do |milliseconds|
+    [false, true].each do |per_call|
+      it "#8 handles #{milliseconds}ms timeouts without a 1ms clamp (per_call=#{per_call})" do
+        handler = lambda do |socket, *|
+          sleep 0.03
+          send_json(socket, { models: [] })
+        end
+        with_http_server(handler) do |url|
+          seconds = milliseconds / 1000.0
+          client = client_for(url, timeout: per_call ? 1 : seconds)
+          expect(client.models.list(**(per_call ? { timeout: seconds } : {}))).to eq([])
+        end
+      end
+    end
+  end
+
   it "does not silently retry a GET when retries are disabled" do
     attempts = 0
     handler = ->(*) { attempts += 1 }
@@ -113,7 +129,7 @@ RSpec.describe "Native HTTP reliability" do
     end
     with_http_server(handler) do |url|
       client_for(url, default_headers: { "AUTHORIZATION" => "bad", "X-Team" => "default" }).system_one(
-        state: { doc: "hello" }, questions: { q: Typesafe::SDK.noul },
+        state: { doc: "hello" }, questions: { q: Typesafe::SDK.noul("Question?") },
         headers: { "Content-Type" => "bad", "x-team" => "call", "X-TypeSafe-Retry-Count" => "99" }
       )
       line, headers, body = observed.pop

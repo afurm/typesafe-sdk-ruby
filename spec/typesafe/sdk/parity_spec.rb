@@ -13,7 +13,7 @@ RSpec.describe "Official JS 0.6.0 parity" do
     questions = {
       yes: Typesafe::SDK.noul("Is it urgent?", criteria: { true: "urgent", false: "routine" }),
       category: Typesafe::SDK.choice(nil, billing: nil, other: { description: "other" }),
-      rating: Typesafe::SDK.score("Priority?", [nil, "medium", ["high"]])
+      rating: Typesafe::SDK.score("Priority?", ["low", "medium", ["high"]])
     }
     expect(JSON.parse(JSON.generate(questions))).to eq(fixture["questions"])
   end
@@ -59,10 +59,12 @@ RSpec.describe "Official JS 0.6.0 parity" do
   end
 
   fixture["errors"].each_with_index do |example, index|
-    it "matches error class, message, and metadata for fixture #{index}" do
+    it "matches baseline errors with the documented #13 correction for fixture #{index}" do
       headers = Typesafe::SDK::Headers.new("x-typesafe-request-id" => "req-error", "retry-after-ms" => "12.5")
       error = Typesafe::SDK::APIError.from_response(example["status"], example["body"], headers)
-      expect(error.class.name.split("::").last).to eq(example["name"])
+      # Ruby adds a ConflictError subclass for upstream #13, preserving APIError rescue.
+      expected_class = example["status"] == 409 ? "ConflictError" : example["name"]
+      expect(error.class.name.split("::").last).to eq(expected_class)
       expect(error.message).to eq(example["message"])
       expect(error.request_id).to eq(example["request_id"])
       expect(error.retry_after_ms).to eq(example["retry_after_ms"]) if example.key?("retry_after_ms")
@@ -70,9 +72,11 @@ RSpec.describe "Official JS 0.6.0 parity" do
   end
 
   fixture["retry_headers"].each do |example|
-    it "matches upstream Retry-After parsing for #{example['headers']}" do
+    it "matches baseline Retry-After parsing with the documented #9 correction for #{example['headers']}" do
       headers = Typesafe::SDK::Headers.new(example["headers"])
-      expect(Typesafe::SDK::Retry.parse_retry_after(headers)).to eq(example["milliseconds"])
+      # Explicit correction for upstream #9: a blank ms header falls back to valid seconds.
+      expected = example["headers"]["retry-after-ms"] == "" ? 9000 : example["milliseconds"]
+      expect(Typesafe::SDK::Retry.parse_retry_after(headers)).to eq(expected)
     end
   end
 end
