@@ -16,11 +16,12 @@ It targets the official [JavaScript SDK](https://github.com/typesafe-ai/typesafe
 **0.6.0**. Official [JavaScript and Python SDKs](https://docs.typesafe.ai/sdk) are maintained
 by TypeSafe AI.
 
-**Release status:** this README follows `main`. Ruby **0.6.0.1** is currently unreleased;
-its fixes, stricter validation, new error classes, `with_response:`, and `extra_body:`
-are not in the published 0.6.0 gem.
-See the [changelog](CHANGELOG.md) and [releases](https://github.com/afurm/typesafe-sdk-ruby/releases).
-Ruby-only corrections add a fourth version component: `0.6.0.1` still targets JS `0.6.0`.
+**Version:** this README documents Ruby **0.6.0.1**, targeting JS **0.6.0**.
+Ruby-only corrections add a fourth version component. Check
+[RubyGems](https://rubygems.org/gems/typesafe-sdk-ruby) and
+[GitHub releases](https://github.com/afurm/typesafe-sdk-ruby/releases) for published versions;
+merging changes into `main` does not publish a gem. See the [changelog](CHANGELOG.md)
+for changes and migration notes.
 
 ## Installation
 

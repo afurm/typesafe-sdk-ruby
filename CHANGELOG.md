@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 Versions follow the official JavaScript SDK, with a fourth numeric component for Ruby-only
 corrections. See [RELEASING.md](docs/RELEASING.md).
 
-## [0.6.0.1] - Unreleased
+## [0.6.0.1] - 2026-09-21
 
 Compatibility target: official JavaScript SDK 0.6.0, commit `66880cc`.
 
