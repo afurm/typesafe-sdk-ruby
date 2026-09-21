@@ -101,4 +101,24 @@ RSpec.describe "Ruby SDK regressions" do
     expect(client.models.list).to eq([])
     expect(calls).to eq(2)
   end
+  {
+    api_connection_error: Typesafe::SDK::APIConnectionError.new("offline"),
+    api_timeout_error: Typesafe::SDK::APITimeoutError.new(100)
+  }.each do |flag, error|
+    it "inherits disabled #{flag} through a nil per-call override" do
+      allow(http).to receive(:request).and_raise(error)
+      client = Typesafe::SDK::Client.new(api_key: "k", http: http, retry_policy: { flag => false })
+      expect { client.models.list(retry_policy: { flag => nil }) }.to raise_error(error.class)
+      expect(http).to have_received(:request).once
+    end
+  end
+
+  it "inherits respect_retry_after through a nil per-call override" do
+    headers = Typesafe::SDK::Headers.new("retry-after-ms" => "123.5")
+    failure = Typesafe::SDK::Response.new(status: 429, headers: headers, body: {}, request_id: nil)
+    allow(http).to receive(:request).and_return(failure, response)
+    client = Typesafe::SDK::Client.new(api_key: "k", http: http)
+    expect(client).to receive(:sleep_with_signal).with(123.5, nil)
+    expect(client.models.list(retry_policy: { respect_retry_after: nil })).to eq([])
+  end
 end

@@ -37,6 +37,27 @@ RSpec.describe "Official JS 0.6.0 parity" do
     expect(result.request_id).to eq(fixture.dig("response_metadata", "request_id"))
   end
 
+  it "preserves every answer field, fractional scores, string rubric keys, and usage" do
+    wire = fixture.fetch("result")
+    result = Typesafe::SDK::SystemOneResult.new(wire)
+    expect(result.model).to eq(wire["model"])
+    expect(result.usage.input_tokens).to eq(wire.dig("usage", "input_tokens"))
+    expect(result.usage.output_tokens).to eq(wire.dig("usage", "output_tokens"))
+    wire.fetch("answers").each do |name, fields|
+      answer = result[name]
+      expect(result[name.to_sym]).to equal(answer)
+      fields.each { |field, value| expect(answer.public_send(field)).to eq(value) }
+    end
+  end
+
+  fixture.fetch("retry_flags").each do |example|
+    it "matches the #{example['field']} default for #{example['value'].inspect}" do
+      field = example.fetch("field").to_sym
+      client = Typesafe::SDK::Client.new(api_key: "test", retry_policy: { field => example["value"] })
+      expect(client.retry[field]).to eq(example["resolved"])
+    end
+  end
+
   fixture["errors"].each_with_index do |example, index|
     it "matches error class, message, and metadata for fixture #{index}" do
       headers = Typesafe::SDK::Headers.new("x-typesafe-request-id" => "req-error", "retry-after-ms" => "12.5")

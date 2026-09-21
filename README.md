@@ -4,39 +4,40 @@
 [![CI](https://github.com/afurm/typesafe-sdk-ruby/actions/workflows/ci.yml/badge.svg)](https://github.com/afurm/typesafe-sdk-ruby/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Community-maintained, unofficial** Ruby SDK for [TypeSafe AI](https://typesafe.ai). Ask named
-questions about text or structured state and get typed answers back: yes/no (noul), choice, and
-score questions — with retries, timeouts, structured logging, and typed errors.
+A community-maintained Ruby client for [TypeSafe AI](https://typesafe.ai), with typed answer
+objects, retries, timeouts, cancellation, and configurable logging.
 
-> This gem is not affiliated with, endorsed by, or supported by TypeSafe AI. It is a faithful
-> community port of the official [JavaScript SDK](https://github.com/typesafe-ai/typesafe-sdk-js).
-> Official SDKs: [JavaScript](https://github.com/typesafe-ai/typesafe-sdk-js) and Python.
+TypeSafe's Jev model evaluates state against questions defined by your application. It returns
+structured decisions that your code can use for classification, ranking, and routing.
+Read the [official introduction](https://docs.typesafe.ai/introduction) for the product model.
 
-> **Compatibility:** targets official JS SDK **0.6.0**. New upstream ports use the same
-> version; Ruby-only fixes add a fourth number (e.g. `0.6.0.1` still targets JS `0.6.0`).
-> See the [compatibility tests and differences](docs/COMPATIBILITY.md) and
-> [release process](docs/RELEASING.md).
+**Unofficial:** this project is not affiliated with, endorsed by, or supported by TypeSafe AI.
+It targets the official [JavaScript SDK](https://github.com/typesafe-ai/typesafe-sdk-js)
+**0.6.0**. Official [JavaScript and Python SDKs](https://docs.typesafe.ai/sdk) are maintained
+by TypeSafe AI.
 
-## Requirements
-
-- Ruby 3.1 or newer
-- A TypeSafe API key (`TYPESAFE_API_KEY`)
+**Release status:** this README follows `main`. Ruby **0.6.0.1** is currently unreleased;
+its transport fixes, `with_response:`, and `extra_body:` are not in the published 0.6.0 gem.
+See the [changelog](CHANGELOG.md) and [releases](https://github.com/afurm/typesafe-sdk-ruby/releases).
+Ruby-only corrections add a fourth version component: `0.6.0.1` still targets JS `0.6.0`.
 
 ## Installation
 
-Install the gem:
+Requires Ruby **3.1 or newer**; CI tests Ruby 3.1, 3.2, 3.3, 3.4, and 4.0.
 
 ```sh
 gem install typesafe-sdk-ruby
 ```
 
-Or add it to your application's `Gemfile`:
+For Bundler, add the gem to your application's `Gemfile` and run `bundle install`:
 
 ```ruby
 gem "typesafe-sdk-ruby"
 ```
 
-and run `bundle install`.
+Create an API key in the [TypeSafe console](https://console.typesafe.ai/), then set
+`TYPESAFE_API_KEY` in your environment or application secret store. The SDK reads it
+automatically. See the [official quick start](https://docs.typesafe.ai/introduction/quickstart).
 
 ## Quickstart
 
@@ -44,70 +45,180 @@ and run `bundle install`.
 require "typesafe-sdk-ruby"
 
 client = Typesafe::SDK::Client.new
-
 response = client.system_one(
   state: { document: "I was charged twice. Please fix this ASAP." },
   questions: {
     category: Typesafe::SDK.choice("What is this ticket about?", {
-      billing: nil,
-      technical: nil,
-      other: nil,
+      billing: "Payments, invoices, or refunds",
+      technical: "A product error or technical problem",
+      other: "A different subject",
     }),
   },
 )
 
-puts response.answers["category"].choice
+category = response[:category]
+puts category.choice
+puts category.confidence
+puts category.probabilities
+puts response.model
+puts response.usage.input_tokens
 ```
 
-Answer objects are typed by the question that produced them:
+`response[:category]` and `response["category"]` work interchangeably.
+`response.answers` is a regular Hash with string keys.
 
-| Question | Answer class | Key fields |
+## Choosing a question type
+
+| Builder | Use it for | Result |
 | --- | --- | --- |
-| `noul` | `Typesafe::SDK::NoulResponse` | `noul` (probability of yes) |
-| `choice` | `Typesafe::SDK::ChoiceResponse` | `choice`, `confidence`, `probabilities` |
-| `score` | `Typesafe::SDK::ScoreResponse` | `score`, `confidence`, `legend`, `probabilities` |
+| `noul` | A yes/no judgment | `noul`: probability of yes, from 0 to 1 |
+| `choice` | Selecting one named option | `choice`, `probabilities`, `confidence` |
+| `score` | Rating against ordered descriptions | `score`, `legend`, `probabilities`, `confidence` |
+
+Mix question types in a single call. Each question is evaluated against the same state,
+independently of the other questions. Put the meaning in the instructions and criteria;
+question IDs identify answers and are not used for inference.
+See [primitives](https://docs.typesafe.ai/primitives) and the [API reference](https://docs.typesafe.ai/api).
+
+```ruby
+response = client.system_one(
+  state: "The export fails in Safari, but I can finish the task in Firefox.",
+  questions: {
+    workaround: Typesafe::SDK.noul("Does the user describe a working alternative?"),
+    category: Typesafe::SDK.choice("Which area is affected?", {
+      export: "Exporting application data",
+      login: "Signing in to the application",
+      other: "Another area",
+    }),
+    severity: Typesafe::SDK.score("How much does this issue affect the user's task?", [
+      "The task works; only its appearance is affected",
+      "The task needs an alternative method to complete",
+      "The task cannot be completed",
+    ]),
+  },
+)
+
+puts response[:workaround].noul
+puts response[:severity].score
+puts response[:severity].probabilities["1"]
+puts response[:severity].legend["1"]
+```
+
+Score criteria are an **ordered array**, with positions starting at zero. A returned score
+is a probability-weighted mean and can be fractional. `legend` and `probabilities` retain
+string keys such as `"0"` and `"1"`. See the [Score guide](https://docs.typesafe.ai/primitives/score).
+
+State, instructions, and criterion descriptions can also contain JSON objects or arrays.
+Optional noul criteria can describe either outcome:
+
+```ruby
+question = Typesafe::SDK.noul("Is this an explicit cancellation request?", criteria: {
+  true: "The customer asks to end the subscription",
+  false: "The customer only asks about cancellation terms",
+})
+```
+
+See [structured questions](https://docs.typesafe.ai/primitives/advanced) for more examples.
+
+## Using confidence
+
+Choice and Score include confidence derived from their probability distributions. Confidence
+is distinct from the probability of the selected option and is not a guarantee of correctness.
+Noul returns the probability of yes and has no separate confidence field.
+See the [official confidence guide](https://docs.typesafe.ai/confidence).
+
+```ruby
+category = response[:category]
+threshold = 0.8 # Illustrative: evaluate a suitable threshold on your own labeled examples.
+puts(category.confidence >= threshold ? "Route to #{category.choice}" : "Needs review")
+```
 
 ## Configuration
 
 Explicit options take precedence over environment variables, then SDK defaults.
+Blank environment values are ignored.
 
 | Option | Environment variable | Default |
 | --- | --- | --- |
-| `api_key:` | `TYPESAFE_API_KEY` | — (required) |
+| `api_key:` | `TYPESAFE_API_KEY` | Required |
 | `base_url:` | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` |
 | `default_model:` | `TYPESAFE_DEFAULT_MODEL` | `jev-latest` |
 | `log_level:` | `TYPESAFE_LOG_LEVEL` | `warn` |
 
 ```ruby
 client = Typesafe::SDK::Client.new(
-  api_key: "sk-...",
-  base_url: "https://api.typesafe.ai",
-  default_model: "jev-latest",
-  log_level: :info,          # :debug, :info, :warn, :error, :off
-  timeout: 10,               # seconds per attempt
+  timeout: 10, # Seconds per attempt, including connection setup and response body receipt.
   retry_policy: { max_retries: 2, backoff_initial_ms: 500 },
-  default_headers: { "X-My-Header" => "value" },
+  log_level: :info, # :debug, :info, :warn, :error, or :off
+  default_headers: { "X-My-App" => "support" },
 )
 ```
+
+`jev-latest` is a moving alias. For reproducible deployments, select an explicit model from
+`client.models.list` and set `default_model:` or a per-call `model:`. See
+[available models and aliases](https://docs.typesafe.ai/models).
 
 ## Retries and timeouts
 
-The SDK retries HTTP `408`, `429`, and `5xx` responses plus connection failures and timeouts,
-with capped exponential backoff and jitter. It honors `Retry-After` and `retry-after-ms`
-headers up to a cap. A timeout covers the full attempt, including connection setup and body
-receipt. Retries each receive a fresh timeout; total call time can include multiple attempts
-and backoff. Every option is overridable per client or per call:
+By default, the SDK retries HTTP 408, 429, and 5xx responses, connection failures, and timeouts,
+with up to two retries after the initial attempt. Backoff starts at 500 ms, doubles up to
+5,000 ms, and uses up to 25% downward jitter. Server `Retry-After` and `retry-after-ms` delays
+are honored up to 60,000 ms; larger delays fall back to backoff.
+
+Each attempt receives a fresh timeout, so total call time can include several attempts and
+backoff. Override settings per client or per call:
 
 ```ruby
 client.system_one(
-  state: "...",
-  questions: { ... },
+  state: "A refund request",
+  questions: { billing: Typesafe::SDK.noul("Is this about billing?") },
   timeout: 30,
-  retry_policy: { max_retries: 0 },  # disable retries for this call
+  retry_policy: { max_retries: 0 },
 )
 ```
 
-## Response metadata and additional API fields
+The full retry policy supports `max_retries`, `backoff_initial_ms`, `backoff_max_ms`,
+`backoff_jitter`, `http_statuses`, `respect_retry_after`, `max_retry_after_ms`,
+`api_connection_error`, and `api_timeout_error`. Overrides merge field by field.
+Nil boolean flags inherit the existing setting; explicit `false` disables that behavior.
+
+## Error handling
+
+```ruby
+begin
+  client.system_one(
+    state: "A refund request",
+    questions: { billing: Typesafe::SDK.noul("Is this about billing?") },
+  )
+rescue Typesafe::SDK::RateLimitError => e
+  warn "Rate limited; suggested retry delay: #{e.retry_after_ms.inspect}ms"
+rescue Typesafe::SDK::APIError => e
+  warn "API error #{e.status}; request ID: #{e.request_id}"
+rescue Typesafe::SDK::APIConnectionError => e
+  warn e.message
+end
+```
+
+Errors reach your code after any configured retries. All SDK errors inherit from
+`Typesafe::SDK::TypeSafeError`:
+
+| Error | Meaning |
+| --- | --- |
+| `BadRequestError` | HTTP 400 |
+| `AuthenticationError` | HTTP 401 |
+| `PermissionDeniedError` | HTTP 403 |
+| `NotFoundError` | HTTP 404 |
+| `UnprocessableEntityError` | HTTP 422 |
+| `RateLimitError` | HTTP 429; exposes `retry_after_ms` |
+| `InternalServerError` | HTTP 5xx |
+| `APIError` | Other non-2xx responses; exposes status, headers, body, and request ID |
+| `APIConnectionError` | Connection or response-body delivery failure |
+| `APITimeoutError` | Subclass of `APIConnectionError`; exposes `timeout_ms` |
+| `APIUserAbortError` | Caller cancellation; never retried |
+
+## Response metadata and additional fields
+
+Added for Ruby **0.6.0.1**:
 
 ```ruby
 result = client.system_one(
@@ -120,105 +231,97 @@ puts result.request_id
 puts result.response.status
 ```
 
-`client.models.list(with_response: true)` provides the same wrapper around model cards.
-Responses expose case-insensitive `headers` and a parsed `body`. To forward future API fields,
-pass `extra_body: { new_option: nil }`; named `state`, `questions`, and `model` arguments win.
-The API decides whether an additional field is supported.
-
-## Error handling
-
-```ruby
-begin
-  client.system_one(state: "...", questions: { ... })
-rescue Typesafe::SDK::RateLimitError => e
-  warn "Rate limited; server retry delay: #{e.retry_after_ms.inspect}ms"
-rescue Typesafe::SDK::APIError => e
-  warn "API error #{e.status} (request #{e.request_id}): #{e.body}"
-end
-```
-
-Error hierarchy:
-
-- `Typesafe::SDK::TypeSafeError` — base class
-  - `Typesafe::SDK::APIError` — non-2xx HTTP responses
-    - `BadRequestError` (400), `AuthenticationError` (401), `PermissionDeniedError` (403),
-      `NotFoundError` (404), `UnprocessableEntityError` (422), `RateLimitError` (429),
-      `InternalServerError` (5xx)
-  - `Typesafe::SDK::APIConnectionError` — DNS, TLS, connection failures
-    - `Typesafe::SDK::APITimeoutError`
-  - `Typesafe::SDK::APIUserAbortError` — caller cancellation
+`client.models.list(with_response: true)` wraps the model cards the same way. The response
+exposes case-insensitive `headers` and a parsed `body`.
+`extra_body: { new_option: nil }` forwards additional JSON fields; named `state`, `questions`,
+and `model` arguments take precedence. The API decides whether a field is supported.
 
 ## Cancellation
 
 ```ruby
 signal = Typesafe::SDK::Signal.new
-Thread.new { sleep 5; signal.cancel }
-
-client.system_one(state: "...", questions: { ... }, signal: signal)
-# raises Typesafe::SDK::APIUserAbortError when canceled, including during connection setup, body receipt, or retry backoff
+canceller = Thread.new { sleep 5; signal.cancel }
+begin
+  client.system_one(
+    state: "A refund request",
+    questions: { billing: Typesafe::SDK.noul("Is this about billing?") },
+    signal: signal,
+  )
+rescue Typesafe::SDK::APIUserAbortError
+  warn "Request canceled"
+ensure
+  canceller.kill.join
+end
 ```
+
+From Ruby 0.6.0.1, cancellation interrupts active requests and retry backoff, and cleans up
+the request worker and socket before returning.
 
 ## Listing models
 
 ```ruby
 client.models.list.each do |model|
-  puts "#{model.name}: #{model.description}"
+  puts "#{model.name}: #{model.description} (#{model.release_date})"
 end
 ```
 
-## Logging
+## Logging and Rails
 
-The default logger writes to `$stderr` with a `[typesafe-ai]` prefix. `info` logs request
-summaries; `debug` adds headers (credentials redacted) and bodies. Pass any object responding
-to `debug`/`info`/`warn`/`error`. Standard Ruby `Logger` and `Rails.logger` are supported;
-loggers accepting keyword arguments receive structured data. Debug bodies may contain your
-application data, so use debug logging only where that is appropriate:
+The default logger writes to `$stderr` with a `[typesafe-ai]` prefix. `info` includes request
+summaries; `debug` adds redacted credential headers and request/response bodies. Bodies may
+contain application data and are **not** redacted.
 
-```ruby
-client = Typesafe::SDK::Client.new(logger: Rails.logger, log_level: :info)
-```
-
-## Ruby on Rails
-
-The gem is framework-agnostic and works out of the box in Rails. A common pattern is a
-wrapped initializer:
+From Ruby 0.6.0.1, standard Ruby `Logger` and `Rails.logger` also accept debug details:
 
 ```ruby
-# config/initializers/typesafe.rb
-TYPESAFE = Typesafe::SDK::Client.new(log_level: :info)
+# config/initializers/typesafe.rb; configure TYPESAFE_API_KEY through your secret store.
+TYPESAFE = Typesafe::SDK::Client.new(logger: Rails.logger, log_level: :info)
 ```
 
-```ruby
-# app/models/concerns/typesafe_classifiable.rb
-module TypesafeClassifiable
-  def classify(text)
-    TYPESAFE.system_one(
-      state: text,
-      questions: {
-        category: Typesafe::SDK.choice("Category?", {
-          billing: nil, technical: nil, other: nil,
-        }),
-      },
-    ).answers["category"].choice
-  end
-end
-```
+Call `TYPESAFE.system_one(...)` from application code. In plain Ruby, use
+`require "logger"` and pass `logger: Logger.new($stderr)`; add the `logger` gem to your
+application if your Ruby version does not provide it by default.
 
-## Development
+## Coming from JavaScript
+
+| JavaScript | Ruby |
+| --- | --- |
+| `new TypeSafeClient()` | `Typesafe::SDK::Client.new` |
+| `systemOne(request, options)` | `system_one(state:, questions:, **options)` |
+| `apiKey`, `baseURL`, `defaultModel` | `api_key:`, `base_url:`, `default_model:` |
+| `timeout` in milliseconds | `timeout:` in seconds |
+| `retry: { maxRetries: 0 }` | `retry_policy: { max_retries: 0 }` |
+| `.withResponse()` | `with_response: true` (Ruby 0.6.0.1+) |
+| `AbortController` | `Typesafe::SDK::Signal` |
+| `answers.category` | `response[:category]` or `response.answers["category"]` |
+
+Ruby calls are synchronous and return Ruby answer objects. They do not provide TypeScript
+compile-time inference, Fetch streams, connection pooling, or automatic redirect following.
+See [tested compatibility and intentional differences](docs/COMPATIBILITY.md).
+
+## Development and contributing
 
 ```sh
 bundle install
-bundle exec rake        # specs + RuboCop
-bundle exec rspec       # specs only
-bundle exec rubocop     # lint only
+bundle exec rake # Tests and RuboCop; no API key or external API calls required.
 ```
 
-## Contributing
+Native transport tests bind loopback sockets. CI also builds and installs the packaged gem.
+For an explicit live check, follow [live verification](docs/COMPATIBILITY.md#live-verification).
+The [demo](examples/demo.rb) uses real API calls and can be run with
+`bundle exec ruby examples/demo.rb` after configuring your key.
 
-Bug reports and pull requests are welcome on
-[GitHub](https://github.com/afurm/typesafe-sdk-ruby/issues). See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md), the [PR template](.github/PULL_REQUEST_TEMPLATE.md),
+and the [release process](docs/RELEASING.md). Changes are reviewed and merged by the repository owner.
+
+## Support and security
+
+Use [issues](https://github.com/afurm/typesafe-sdk-ruby/issues) for Ruby client bugs and
+[discussions](https://github.com/afurm/typesafe-sdk-ruby/discussions) for usage questions.
+See [SUPPORT.md](SUPPORT.md) for API/account questions and useful report details.
+Report vulnerabilities privately using [SECURITY.md](SECURITY.md).
+All participation follows our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](LICENSE).
+[MIT](LICENSE), including attribution to the upstream TypeSafe JavaScript SDK.

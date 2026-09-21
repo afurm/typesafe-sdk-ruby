@@ -201,16 +201,21 @@ module Typesafe
                          else
                            base[:http_statuses]
                          end,
-          respect_retry_after: o.fetch(:respect_retry_after, base[:respect_retry_after]),
+          respect_retry_after: resolve_retry_flag(base, o, :respect_retry_after),
           max_retry_after_ms: if o.key?(:max_retry_after_ms)
                                 assert_non_negative("retry.max_retry_after_ms",
                                                     o[:max_retry_after_ms])
                               else
                                 base[:max_retry_after_ms]
                               end,
-          api_connection_error: o.fetch(:api_connection_error, base[:api_connection_error]),
-          api_timeout_error: o.fetch(:api_timeout_error, base[:api_timeout_error])
+          api_connection_error: resolve_retry_flag(base, o, :api_connection_error),
+          api_timeout_error: resolve_retry_flag(base, o, :api_timeout_error)
         }.freeze
+      end
+
+      # Like upstream's nullish fallback, nil inherits while false stays explicit.
+      def resolve_retry_flag(base, overrides, name)
+        overrides[name].nil? ? base[name] : overrides[name]
       end
 
       # Last value wins regardless of casing; `nil` removes a protected header.
