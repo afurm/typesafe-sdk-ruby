@@ -37,7 +37,12 @@ the [TypeSafe AI](https://typesafe.ai) API, ported from the official
 1. Fork the repository and create a feature branch from `main`.
 2. Make your changes with focused commits.
 3. Ensure `bundle exec rake` passes.
-4. Open a pull request describing what changed and why.
+4. Open a pull request using the [pull request template](.github/PULL_REQUEST_TEMPLATE.md).
+   Describe the problem, resulting behavior, checks actually run, and compatibility or release
+   impact. Write "Not applicable" for sections that do not apply; explain any skipped checks.
+
+Keep descriptions focused on the change. Routine maintainer mentions are unnecessary.
+The repository owner reviews and merges pull requests; contributors should not enable auto-merge.
 
 ## Reporting bugs
 
