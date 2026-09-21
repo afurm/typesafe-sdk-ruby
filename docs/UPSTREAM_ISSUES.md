@@ -3,7 +3,7 @@
 Reviewed all **11 issues** returned by the official JavaScript repository's all-state issue
 list on **2026-09-21**, including their comments. All were open at review time. The baseline
 is `@typesafe-ai/sdk` **0.6.0**, commit `66880ccded6cb642dc1809620c2b108c33730214`.
-Ruby changes below are included in **0.6.0.1 (unreleased)**.
+Ruby changes below are included in **0.6.0.1**.
 
 This audit distinguishes client fixes from runtime differences and server feature requests.
 It does not claim that the upstream issues are closed or that every requested API feature
