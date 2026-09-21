@@ -38,15 +38,15 @@ module Typesafe
         return nil unless headers.respond_to?(:[])
 
         if (ms = headers["retry-after-ms"])
-          parsed = Integer(ms, exception: false)
-          return parsed if parsed && parsed >= 0
+          parsed = ms.to_s.strip.empty? ? 0.0 : Float(ms, exception: false)
+          return parsed if parsed&.finite? && parsed >= 0
         end
 
         raw = headers["retry-after"]
         return nil if raw.nil?
 
-        seconds = Float(raw, exception: false)
-        return (seconds * 1000).round if seconds && seconds >= 0
+        seconds = raw.to_s.strip.empty? ? 0.0 : Float(raw, exception: false)
+        return seconds >= 0 ? seconds * 1000 : nil if seconds&.finite?
 
         date = begin
           Time.parse(raw)

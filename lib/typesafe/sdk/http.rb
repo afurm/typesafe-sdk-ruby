@@ -9,6 +9,7 @@ module Typesafe
       def initialize
         @mutex = Mutex.new
         @canceled = false
+        @condition = ConditionVariable.new
       end
 
       def canceled?
@@ -16,7 +17,10 @@ module Typesafe
       end
 
       def cancel
-        @mutex.synchronize { @canceled = true }
+        @mutex.synchronize do
+          @canceled = true
+          @condition.broadcast
+        end
       end
 
       # Raise {APIUserAbortError} if canceled.
@@ -27,8 +31,10 @@ module Typesafe
       # Wait up to `seconds`, returning early when canceled.
       def wait(seconds)
         deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
-        while !canceled? && (remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)).positive?
-          sleep([remaining, 0.05].min)
+        @mutex.synchronize do
+          while !@canceled && (remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)).positive?
+            @condition.wait(@mutex, remaining)
+          end
         end
       end
     end
@@ -69,6 +75,7 @@ module Typesafe
         check_signal!(signal)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
+        http.max_retries = 0 # Only the SDK owns retries and retry-count headers.
         http.open_timeout = timeout
         http.read_timeout = timeout
         http.write_timeout = timeout if http.respond_to?(:write_timeout=)
@@ -78,9 +85,7 @@ module Typesafe
         headers.each { |name, value| req[name] = value }
         req.body = body if body
 
-        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        raw = http.request(req)
-        ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+        raw = perform(http, req, timeout, signal)
         body_text = raw.body.to_s
         parsed = parse_body(body_text, raw["content-type"])
         Response.new(
@@ -93,12 +98,55 @@ module Typesafe
         raise
       rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout => e
         raise APITimeoutError.new((timeout * 1000).round, cause: e)
-      rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH, Errno::ETIMEDOUT,
-             SocketError, OpenSSL::SSL::SSLError, EOFError, IOError => e
+      rescue SystemCallError, SocketError, OpenSSL::SSL::SSLError, EOFError, IOError,
+             Net::HTTPBadResponse, Net::ProtocolError, Zlib::Error => e
         raise APIConnectionError.new("Connection error: #{e.message}", cause: e)
       end
 
       private
+
+      # Net::HTTP's read timeout resets for every read. A private worker bounds the
+      # whole connection/upload/body lifecycle without interrupting the caller thread.
+      # Killing it runs Net::HTTP's ensure blocks; join completes socket cleanup before return.
+      def perform(http, request, timeout, signal)
+        deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+        worker = Thread.new do
+          Thread.current.report_on_exception = false
+          begin
+            [read_response(http, request), nil]
+          rescue StandardError => e
+            [nil, e]
+          end
+        end
+        loop do
+          signal&.check!
+          remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          raise APITimeoutError, (timeout * 1000).round unless remaining.positive?
+          break if worker.join([remaining, 0.01].min)
+        end
+        signal&.check!
+        response, error = worker.value
+        raise error if error
+
+        response
+      ensure
+        worker&.kill&.join
+      end
+
+      def read_response(http, request)
+        http.start do
+          http.request(request) do |response|
+            response.ignore_eof = false if response.respond_to?(:ignore_eof=)
+            response.read_body
+            # Older Ruby releases silently accept short Content-Length bodies.
+            # Net::HTTP removes Content-Length when automatically decompressing.
+            length = response["content-length"]
+            if length && response.body && response.body.bytesize < length.to_i
+              raise EOFError, "Response body ended before Content-Length bytes arrived"
+            end
+          end
+        end
+      end
 
       def check_signal!(signal)
         signal&.check!

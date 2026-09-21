@@ -1,0 +1,539 @@
+{
+  "upstream": {
+    "version": "0.6.0",
+    "commit": "66880ccded6cb642dc1809620c2b108c33730214"
+  },
+  "questions": {
+    "yes": {
+      "type": "noul",
+      "instructions": "Is it urgent?",
+      "criteria": {
+        "true": "urgent",
+        "false": "routine"
+      }
+    },
+    "category": {
+      "type": "choice",
+      "instructions": null,
+      "criteria": {
+        "billing": null,
+        "other": {
+          "description": "other"
+        }
+      }
+    },
+    "rating": {
+      "type": "score",
+      "instructions": "Priority?",
+      "criteria": [
+        null,
+        "medium",
+        [
+          "high"
+        ]
+      ]
+    }
+  },
+  "request": {
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "method": "POST",
+    "body": {
+      "state": {
+        "document": "example"
+      },
+      "questions": {
+        "yes": {
+          "type": "noul",
+          "instructions": "Is it urgent?",
+          "criteria": {
+            "true": "urgent",
+            "false": "routine"
+          }
+        },
+        "category": {
+          "type": "choice",
+          "instructions": null,
+          "criteria": {
+            "billing": null,
+            "other": {
+              "description": "other"
+            }
+          }
+        },
+        "rating": {
+          "type": "score",
+          "instructions": "Priority?",
+          "criteria": [
+            null,
+            "medium",
+            [
+              "high"
+            ]
+          ]
+        }
+      },
+      "future_option": null,
+      "nested": {
+        "enabled": true
+      },
+      "model": "jev-latest"
+    }
+  },
+  "response_metadata": {
+    "status": 200,
+    "request_id": "req-parity"
+  },
+  "errors": [
+    {
+      "status": 400,
+      "body": {
+        "error": "failure"
+      },
+      "name": "BadRequestError",
+      "message": "400 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 400,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "BadRequestError",
+      "message": "400 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 400,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "BadRequestError",
+      "message": "400 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "error": "failure"
+      },
+      "name": "AuthenticationError",
+      "message": "401 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "AuthenticationError",
+      "message": "401 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 401,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "AuthenticationError",
+      "message": "401 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
+        "error": "failure"
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 403,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "PermissionDeniedError",
+      "message": "403 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "error": "failure"
+      },
+      "name": "NotFoundError",
+      "message": "404 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "NotFoundError",
+      "message": "404 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 404,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "NotFoundError",
+      "message": "404 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
+        "error": "failure"
+      },
+      "name": "APIError",
+      "message": "408 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "APIError",
+      "message": "408 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 408,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "APIError",
+      "message": "408 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "error": "failure"
+      },
+      "name": "APIError",
+      "message": "409 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "APIError",
+      "message": "409 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 409,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "APIError",
+      "message": "409 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
+        "error": "failure"
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 422,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "UnprocessableEntityError",
+      "message": "422 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 429,
+      "body": {
+        "error": "failure"
+      },
+      "name": "RateLimitError",
+      "message": "429 failure",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
+    },
+    {
+      "status": 429,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "RateLimitError",
+      "message": "429 questions.q: invalid",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
+    },
+    {
+      "status": 429,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "RateLimitError",
+      "message": "429 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error",
+      "retry_after_ms": 12.5
+    },
+    {
+      "status": 500,
+      "body": {
+        "error": "failure"
+      },
+      "name": "InternalServerError",
+      "message": "500 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 500,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "InternalServerError",
+      "message": "500 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 500,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "InternalServerError",
+      "message": "500 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
+        "error": "failure"
+      },
+      "name": "InternalServerError",
+      "message": "503 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "InternalServerError",
+      "message": "503 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 503,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "InternalServerError",
+      "message": "503 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "error": "failure"
+      },
+      "name": "InternalServerError",
+      "message": "599 failure",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "detail": [
+          {
+            "loc": [
+              "body",
+              "questions",
+              "q"
+            ],
+            "msg": "invalid"
+          }
+        ]
+      },
+      "name": "InternalServerError",
+      "message": "599 questions.q: invalid",
+      "request_id": "req-error"
+    },
+    {
+      "status": 599,
+      "body": {
+        "noise": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "name": "InternalServerError",
+      "message": "599 {\"noise\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…",
+      "request_id": "req-error"
+    }
+  ],
+  "retry_headers": [
+    {
+      "headers": {
+        "retry-after-ms": "12.5"
+      },
+      "milliseconds": 12.5
+    },
+    {
+      "headers": {
+        "retry-after-ms": "2e2"
+      },
+      "milliseconds": 200
+    },
+    {
+      "headers": {
+        "retry-after": "0.0005"
+      },
+      "milliseconds": 0.5
+    },
+    {
+      "headers": {
+        "retry-after": "-1"
+      },
+      "milliseconds": null
+    },
+    {
+      "headers": {
+        "retry-after-ms": "invalid",
+        "retry-after": "1.5"
+      },
+      "milliseconds": 1500
+    },
+    {
+      "headers": {
+        "retry-after": "garbage"
+      },
+      "milliseconds": null
+    },
+    {
+      "headers": {
+        "retry-after-ms": "",
+        "retry-after": "9"
+      },
+      "milliseconds": 0
+    },
+    {
+      "headers": {
+        "retry-after": "Infinity"
+      },
+      "milliseconds": null
+    }
+  ]
+}

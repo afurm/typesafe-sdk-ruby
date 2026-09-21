@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["3.1", "3.2", "3.3", "3.4"]
+        ruby: ["3.1", "3.2", "3.3", "3.4", "4.0"]
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
@@ -25,3 +25,12 @@ jobs:
         run: bundle exec rspec
       - name: Run RuboCop
         run: bundle exec rubocop
+      - name: Check release metadata
+        run: ruby script/check_release.rb
+      - name: Build and smoke-test packaged gem
+        run: |
+          gem build typesafe-sdk-ruby.gemspec --strict
+          gem install --local typesafe-sdk-ruby-*.gem --no-document --ignore-dependencies --install-dir /tmp/typesafe-gem
+          dependency_paths=$(bundle exec ruby -e 'puts Gem.path.join(":")')
+          cd /tmp
+          GEM_PATH="/tmp/typesafe-gem:${dependency_paths}" ruby -r typesafe-sdk-ruby -e 'abort unless Typesafe::SDK::Client.new(api_key: "test").models'

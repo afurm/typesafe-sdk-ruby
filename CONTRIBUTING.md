@@ -29,8 +29,8 @@ the [TypeSafe AI](https://typesafe.ai) API, ported from the official
 - Run `bundle exec rubocop -a` before committing; the CI lints with the same config.
 - Keep the gem dependency-free apart from `json`.
 - Update `CHANGELOG.md` for user-facing changes.
-- Keep `lib/typesafe/sdk/version.rb` and the version in `typesafe-sdk-ruby.gemspec` in sync; a spec
-  enforces this.
+- Update versions only in `lib/typesafe/sdk/version.rb`; the gemspec reads that file.
+  See [the release policy](docs/RELEASING.md).
 
 ## Pull requests
 
@@ -51,5 +51,11 @@ Please do not include API keys or other secrets in issues.
 
 ## Code of conduct
 
-Be kind and constructive. Maintainainers may remove comments or block accounts that are
+Be kind and constructive. Maintainers may remove comments or block accounts that are
 disruptive.
+
+## Compatibility verification
+
+See [COMPATIBILITY.md](docs/COMPATIBILITY.md) for the pinned upstream release, generated
+JavaScript fixtures, native socket tests, and opt-in live smoke test. Ordinary tests require
+no API key and make no external requests. Socket tests need permission to bind loopback ports.

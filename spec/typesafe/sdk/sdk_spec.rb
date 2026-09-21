@@ -4,7 +4,8 @@ require "spec_helper"
 
 RSpec.describe Typesafe::SDK do
   it "exposes the version" do
-    expect(Typesafe::SDK::VERSION).to eq("0.6.0")
+    expect(Typesafe::SDK::VERSION.split(".").first(3).join("."))
+      .to eq(Typesafe::SDK::UPSTREAM_VERSION)
     expect(Gem::Specification.load("typesafe-sdk-ruby.gemspec").version.to_s)
       .to eq(Typesafe::SDK::VERSION)
   end
