@@ -2,7 +2,7 @@
 
 module Typesafe
   module SDK
-    # Builders and validation for the three question types.
+    # Builders and validation for the noul, score, choice, and box question types.
     module Questions
       MAX_SCORE_LEVELS = 10
       MAX_CHOICE_OPTIONS = 255
@@ -10,7 +10,7 @@ module Typesafe
       module_function
 
       # Create a yes/no question. Supply instructions or at least one outcome description.
-      # @param instructions [String, Hash, Array, nil]
+      # @param instructions [String, Hash, Array, Image, TextWithAssets, nil]
       # @param criteria [Hash, nil] optional true/false outcome descriptions.
       def noul(instructions = nil, criteria: nil)
         question = { type: "noul", instructions: instructions, criteria: criteria }
@@ -31,10 +31,19 @@ module Typesafe
         { type: "choice", instructions: instructions, criteria: criteria }
       end
 
-      def validate_state!(state)
-        return if state.is_a?(String) || state.is_a?(Hash) || state.is_a?(Array)
+      # Create a question that locates what its instructions describe in the request's image.
+      # Use the `jev-preview` model for box questions.
+      # @param instructions [String, Hash, Array, Image, TextWithAssets, nil] what to locate.
+      def box(instructions = nil)
+        { type: "box", instructions: instructions }
+      end
 
-        raise TypeSafeError, "`state` must be a string, object, or array; nil is not supported."
+      STATE_TYPES = [String, Hash, Array, Image, TextWithAssets].freeze
+
+      def validate_state!(state)
+        return if STATE_TYPES.any? { |type| state.is_a?(type) }
+
+        raise TypeSafeError, "`state` must be a string, object, array, or image; nil is not supported."
       end
 
       # Validate builders and raw JSON-style questions without altering the caller's data.
@@ -55,6 +64,10 @@ module Typesafe
       end
 
       def validate_noul!(instructions, criteria, name)
+        unless criteria.nil? || criteria.is_a?(Hash)
+          raise TypeSafeError, "Noul question #{name.inspect} criteria must be an object."
+        end
+
         descriptions = criteria.is_a?(Hash) ? criteria.transform_keys(&:to_s) : {}
         return unless instructions.nil? && %w[true false].all? { |key| descriptions[key].nil? }
 

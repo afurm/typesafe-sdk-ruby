@@ -26,14 +26,17 @@ module Typesafe
       attr_reader :request_id
 
       def initialize(status, body, headers, message = nil)
-        super(message || APIError.describe(status, body))
+        super(message || APIError.describe(status, body, headers))
         @status = status
         @body = body
         @headers = headers
         @request_id = headers[Typesafe::SDK::REQUEST_ID_HEADER]
       end
 
-      def self.describe(status, body)
+      def self.describe(status, body, headers = nil)
+        edge = describe_edge_block(status, body, headers)
+        return edge if edge
+
         detail = extract_message(body)
         return "#{status} #{detail}" if detail && !detail.empty?
         return "#{status} status code (no body)" if body.nil?
@@ -79,6 +82,20 @@ module Typesafe
         return describe_validation_errors(body["detail"]) if body["detail"].is_a?(Array)
 
         nil
+      end
+
+      # Describe an HTML page from Cloudflare, which answers before the request reaches the API,
+      # for example when its firewall matches text such as shell commands in the request.
+      def self.describe_edge_block(status, body, headers)
+        return nil unless headers && body.is_a?(String) && body.match?(/\A\s*<(?:!doctype|html)/i)
+
+        ray = headers["cf-ray"]
+        return nil unless ray || headers["server"].to_s.match?(/cloudflare/i)
+
+        "#{status} The response is a Cloudflare HTML page, not a TypeSafe API error" \
+          "#{" (cf-ray #{ray})" if ray}. An edge firewall may have blocked the request before it " \
+          "reached the API; content such as shell commands in the request can trigger it. " \
+          "Report the ray ID to TypeSafe support if the request is valid."
       end
 
       # Format validation errors as semicolon-separated `path: message` entries.

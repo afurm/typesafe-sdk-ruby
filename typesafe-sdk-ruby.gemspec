@@ -10,8 +10,9 @@ Gem::Specification.new do |spec|
   spec.summary = "Unofficial Ruby SDK for the TypeSafe AI API (Jev model)"
   spec.description = <<~DESC.strip
     Unofficial Ruby SDK for the TypeSafe AI API (Jev model). Ask named questions about
-    text or structured state and get typed answers: yes/no (noul), choice, and score
-    questions, with retries, timeouts, structured logging, and typed errors.
+    text, structured state, or images and get typed answers: yes/no (noul), choice, score,
+    and box questions, with retries, timeouts, request compression, structured logging, and
+    typed errors.
   DESC
   spec.homepage = "https://github.com/afurm/typesafe-sdk-ruby"
   spec.license = "MIT"

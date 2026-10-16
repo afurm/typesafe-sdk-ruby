@@ -1,7 +1,7 @@
 {
   "upstream": {
-    "version": "0.6.0",
-    "commit": "66880ccded6cb642dc1809620c2b108c33730214"
+    "version": "0.7.0",
+    "commit": "b844cd1aca12855a5d24a2df52a1401c86e7d37a"
   },
   "questions": {
     "yes": {
@@ -32,14 +32,26 @@
           "high"
         ]
       ]
+    },
+    "where": {
+      "type": "box",
+      "instructions": "The damaged area"
     }
   },
   "request": {
     "url": "https://api.typesafe.ai/v1/systemone",
     "method": "POST",
+    "content_type": "application/json",
+    "content_encoding": null,
     "body": {
       "state": {
-        "document": "example"
+        "document": "example",
+        "score": "NaN",
+        "limits": [
+          1,
+          "Infinity",
+          "-Infinity"
+        ]
       },
       "questions": {
         "yes": {
@@ -70,6 +82,10 @@
               "high"
             ]
           ]
+        },
+        "where": {
+          "type": "box",
+          "instructions": "The damaged area"
         }
       },
       "future_option": null,
@@ -111,11 +127,21 @@
           "1": 0.45,
           "2": 0.45
         }
+      },
+      "where": {
+        "type": "box",
+        "box": {
+          "top": 0.1,
+          "bottom": 0.6,
+          "left": 0.25,
+          "right": 0.75
+        },
+        "confidence": null
       }
     },
     "usage": {
       "input_tokens": 23,
-      "output_tokens": 12
+      "output_tokens": null
     }
   },
   "retry_flags": [
@@ -169,6 +195,240 @@
     "status": 200,
     "request_id": "req-parity"
   },
+  "asset_requests": [
+    {
+      "url": "https://api.typesafe.ai/v1/systemone",
+      "method": "POST",
+      "content_type": "multipart/form-data",
+      "content_encoding": null,
+      "body": {
+        "state": "Inspect <a> and <b>",
+        "questions": {
+          "q": {
+            "type": "noul",
+            "instructions": "Is <a> like <b>?"
+          }
+        },
+        "model": "jev-latest",
+        "assets": {
+          "<a>": {
+            "type": "image",
+            "part": "asset-0"
+          },
+          "<b>": {
+            "type": "image",
+            "part": "asset-1"
+          }
+        }
+      },
+      "parts": [
+        {
+          "name": "asset-0",
+          "filename": "asset-0",
+          "content_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        },
+        {
+          "name": "asset-1",
+          "filename": "asset-1",
+          "content_type": "image/jpeg",
+          "data_base64": "/9j/AA=="
+        }
+      ]
+    },
+    {
+      "url": "https://api.typesafe.ai/v1/systemone",
+      "method": "POST",
+      "content_type": "multipart/form-data",
+      "content_encoding": "zstd",
+      "body": {
+        "state": {
+          "photo": "<photo>",
+          "caption": "Inspect <photo> beside <ref:listing>",
+          "other": "<ref:gif>"
+        },
+        "questions": {
+          "q1": {
+            "type": "noul",
+            "instructions": [
+              "<photo>"
+            ]
+          },
+          "q2": {
+            "type": "score",
+            "instructions": "Rate <ref:listing> (1)",
+            "criteria": [
+              "bad",
+              "good"
+            ]
+          },
+          "q3": {
+            "type": "noul",
+            "instructions": "Is <photo> clear?"
+          },
+          "q4": {
+            "type": "box",
+            "instructions": "<ref:listing>"
+          }
+        },
+        "model": "jev-latest",
+        "assets": {
+          "<photo>": {
+            "type": "image",
+            "part": "asset-0"
+          },
+          "<ref:listing>": {
+            "type": "image",
+            "part": "asset-1"
+          },
+          "<ref:gif>": {
+            "type": "image",
+            "part": "asset-2"
+          }
+        }
+      },
+      "parts": [
+        {
+          "name": "asset-0",
+          "filename": "asset-0",
+          "content_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        },
+        {
+          "name": "asset-1",
+          "filename": "asset-1",
+          "content_type": "image/jpeg",
+          "data_base64": "/9j/AA=="
+        },
+        {
+          "name": "asset-2",
+          "filename": "asset-2",
+          "content_type": "application/octet-stream",
+          "data_base64": "R0lGODlh"
+        }
+      ]
+    },
+    {
+      "url": "https://api.typesafe.ai/v1/systemone",
+      "method": "POST",
+      "content_type": "multipart/form-data",
+      "content_encoding": null,
+      "body": {
+        "state": "Compare <photo> with <ref:photo>",
+        "questions": {
+          "q": {
+            "type": "noul",
+            "instructions": "?"
+          }
+        },
+        "model": "jev-latest",
+        "assets": {
+          "<photo>": {
+            "type": "image",
+            "part": "asset-0"
+          },
+          "<ref:photo>": {
+            "type": "image",
+            "part": "asset-1"
+          }
+        }
+      },
+      "parts": [
+        {
+          "name": "asset-0",
+          "filename": "asset-0",
+          "content_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        },
+        {
+          "name": "asset-1",
+          "filename": "asset-1",
+          "content_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+        }
+      ]
+    }
+  ],
+  "join_texts": {
+    "spaced": "<ref:photo> and <ref:listing>  1",
+    "spaced_assets": [
+      "<ref:photo>",
+      "<ref:listing>"
+    ],
+    "default_separator": "<ref:photo>,<ref:listing>",
+    "empty": ""
+  },
+  "asset_errors": {
+    "unreferenced": "Assets not referenced in the request: <unused>, <\"quoted\">. Write each name in `assets` into `state`, question instructions, or criteria.",
+    "last_name_wins": "Assets not referenced in the request: <first>. Write each name in `assets` into `state`, question instructions, or criteria.",
+    "missing_reference": "Image references without an attached image: <ref:photo>. Tag template literals that interpolate images with `withAssets`.",
+    "empty_image": "Image data is empty.",
+    "invalid_base64": "Image data must contain valid base64 text.",
+    "data_url": "Image data must contain valid base64 text.",
+    "empty_base64": "Image data is empty."
+  },
+  "base64": [
+    {
+      "text": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+      "hex": "89504e470d0a1a0a0000000d4948445200000001000000010804000000b51c0c020000000b4944415478da6364600000000600023081d02f0000000049454e44ae426082"
+    },
+    {
+      "text": " iVBO Rw0K\n",
+      "hex": "89504e470d0a"
+    },
+    {
+      "text": "AQID",
+      "hex": "010203"
+    },
+    {
+      "text": "AQI",
+      "hex": "0102"
+    },
+    {
+      "text": "AQ==",
+      "hex": "01"
+    },
+    {
+      "text": "AQ",
+      "hex": "01"
+    },
+    {
+      "text": "AQ=",
+      "error": "Image data must contain valid base64 text."
+    },
+    {
+      "text": "A",
+      "error": "Image data must contain valid base64 text."
+    },
+    {
+      "text": "AQ=A",
+      "error": "Image data must contain valid base64 text."
+    },
+    {
+      "text": "====",
+      "error": "Image data must contain valid base64 text."
+    }
+  ],
+  "compression": [
+    {
+      "state_length": 1,
+      "state_char": "x",
+      "content_encoding": null,
+      "state_received": true
+    },
+    {
+      "state_length": 1024,
+      "state_char": "x",
+      "content_encoding": "zstd",
+      "state_received": true
+    },
+    {
+      "state_length": 512,
+      "state_char": "é",
+      "content_encoding": "zstd",
+      "state_received": true
+    }
+  ],
   "errors": [
     {
       "status": 400,

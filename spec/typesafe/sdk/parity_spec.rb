@@ -1,21 +1,152 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require_relative "../../support/recording_http"
 
-RSpec.describe "Official JS 0.6.0 parity" do
-  fixture = JSON.parse(File.read(File.expand_path("../../fixtures/js-0.6.0.json", __dir__)))
+RSpec.describe "Official JS 0.7.0 parity" do
+  fixture = JSON.parse(File.read(File.expand_path("../../fixtures/js-0.7.0.json", __dir__), encoding: "UTF-8"))
+  png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+  jpeg = "/9j/AA=="
+
+  # Ruby's noul builder writes omitted criteria as null; JavaScript omits the property.
+  def without_null_criteria(body)
+    body.merge("questions" => body["questions"].transform_values do |question|
+      question["type"] == "noul" && question["criteria"].nil? ? question.except("criteria") : question
+    end)
+  end
+
+  # Replace generated image references, which are random, with stable labels.
+  def normalize(value, labels)
+    json = JSON.generate(value)
+    labels.each { |label, asset| json = json.gsub(asset.to_s, "<ref:#{label}>") }
+    JSON.parse(json)
+  end
+
+  def parts_for_fixture(parts)
+    parts.map do |part|
+      part.except("content").merge("data_base64" => [part["content"]].pack("m0"))
+    end
+  end
 
   it "tracks the recorded upstream release" do
     expect(Typesafe::SDK::UPSTREAM_VERSION).to eq(fixture.dig("upstream", "version"))
   end
 
-  it "serializes all three question types identically" do
+  it "serializes all four question types identically" do
     questions = {
       yes: Typesafe::SDK.noul("Is it urgent?", criteria: { true: "urgent", false: "routine" }),
       category: Typesafe::SDK.choice(nil, billing: nil, other: { description: "other" }),
-      rating: Typesafe::SDK.score("Priority?", ["low", "medium", ["high"]])
+      rating: Typesafe::SDK.score("Priority?", ["low", "medium", ["high"]]),
+      where: Typesafe::SDK.box("The damaged area")
     }
     expect(JSON.parse(JSON.generate(questions))).to eq(fixture["questions"])
+  end
+
+  it "sends the same JSON body, with non-finite numbers as strings (upstream #17)" do
+    http = RecordingHTTP.new
+    client = Typesafe::SDK::Client.new(api_key: "test", http: http, compression: false)
+    client.system_one(state: { document: "example", score: Float::NAN,
+                               limits: [1, Float::INFINITY, -Float::INFINITY] },
+                      questions: fixture["questions"], extra_body: { future_option: nil, nested: { enabled: true } })
+    request = http.requests.first
+    expected = fixture.fetch("request")
+    expect(request.url).to eq(expected["url"])
+    expect(request.http_method.to_s.upcase).to eq(expected["method"])
+    expect(request.content_type).to eq(expected["content_type"])
+    expect(request.content_encoding).to eq(expected["content_encoding"])
+    expect(request.body).to eq(expected["body"])
+  end
+
+  context "with assets" do
+    let(:http) { RecordingHTTP.new }
+    let(:client) { Typesafe::SDK::Client.new(api_key: "test", http: http) }
+    let(:photo) { Typesafe::SDK::Image.from_base64(png) }
+    let(:listing) { Typesafe::SDK::Image.from_base64(jpeg) }
+    let(:gif) { Typesafe::SDK.image("GIF89a") }
+
+    before { skip "zstd-ruby is not installed" unless Typesafe::SDK::Compression.available? }
+
+    it "sends the same multipart requests, parts, and compression" do
+      client.system_one(state: "Inspect <a> and <b>", questions: { q: Typesafe::SDK.noul("Is <a> like <b>?") },
+                        assets: { "<a>" => Typesafe::SDK::Image.from_base64(png),
+                                  "<b>" => Typesafe::SDK::Image.from_base64(jpeg) })
+      client.system_one(
+        state: { photo: photo, caption: Typesafe::SDK.with_assets("Inspect ", photo, " beside ", listing),
+                 other: gif },
+        questions: {
+          q1: Typesafe::SDK.noul([photo]),
+          q2: Typesafe::SDK.score(Typesafe::SDK.with_assets("Rate ", listing, " (", 1, ")"), %w[bad good]),
+          q3: Typesafe::SDK.noul(Typesafe::SDK.join_assets(["Is", photo, "clear?"], " ")),
+          q4: Typesafe::SDK.box(listing)
+        },
+        assets: { "<photo>" => photo }
+      )
+      client.system_one(state: "Compare <photo> with #{photo}", questions: { q: Typesafe::SDK.noul("?") },
+                        assets: { "<photo>" => photo })
+
+      expected = fixture.fetch("asset_requests")
+      expect(http.requests.length).to eq(expected.length)
+      http.requests.zip(expected).each do |request, wire|
+        expect(request.content_type).to eq(wire["content_type"])
+        expect(request.content_encoding).to eq(wire["content_encoding"])
+        sent = normalize({ "body" => without_null_criteria(request.body), "parts" => parts_for_fixture(request.parts) },
+                         { "photo" => photo, "listing" => listing, "gif" => gif })
+        expect(sent).to eq("body" => wire["body"], "parts" => wire["parts"])
+      end
+    end
+
+    it "joins text and images like withAssets.join" do
+      joined = Typesafe::SDK.join_assets([photo, "and", Typesafe::SDK.with_assets(listing), nil, 1], " ")
+      texts = normalize({ "spaced" => joined.text, "spaced_assets" => joined.assets.map(&:to_s),
+                          "default_separator" => Typesafe::SDK.join_assets([photo, listing]).text,
+                          "empty" => Typesafe::SDK.join_assets([]).text }, { "photo" => photo, "listing" => listing })
+      expect(texts).to eq(fixture["join_texts"])
+    end
+
+    it "raises the same asset validation errors before sending" do
+      errors = fixture.fetch("asset_errors")
+      attempt = lambda do |**request|
+        client.system_one(questions: { q: Typesafe::SDK.noul("?") }, **request)
+      rescue Typesafe::SDK::TypeSafeError => e
+        normalize(e.message, { "photo" => photo })
+      end
+      expect(attempt.call(state: "Inspect <photo>",
+                          assets: { "<photo>" => photo, "<unused>" => Typesafe::SDK::Image.from_base64(png),
+                                    '<"quoted">' => photo })).to eq(errors["unreferenced"])
+      expect(attempt.call(state: photo, assets: { "<first>" => photo, "<second>" => photo }))
+        .to eq(errors["last_name_wins"])
+      # Ruby names its own remedy: string interpolation instead of untagged template literals.
+      expect(attempt.call(state: "Inspect #{photo}"))
+        .to start_with(errors["missing_reference"].split(". ").first)
+      expect(http.requests).to be_empty
+      { "empty_image" => -> { Typesafe::SDK.image("") },
+        "invalid_base64" => -> { Typesafe::SDK::Image.from_base64("not base64!") },
+        "data_url" => -> { Typesafe::SDK::Image.from_base64("data:image/png;base64,#{png}") },
+        "empty_base64" => -> { Typesafe::SDK::Image.from_base64("") } }.each do |name, call|
+        expect(&call).to raise_error(Typesafe::SDK::TypeSafeError, errors[name])
+      end
+    end
+
+    fixture.fetch("base64").each do |example|
+      it "decodes base64 like atob for #{example['text'][0, 16].inspect}" do
+        if example["error"]
+          expect { Typesafe::SDK::Image.from_base64(example["text"]) }
+            .to raise_error(Typesafe::SDK::TypeSafeError, example["error"])
+        else
+          expect(Typesafe::SDK::Image.from_base64(example["text"]).data.unpack1("H*")).to eq(example["hex"])
+        end
+      end
+    end
+
+    it "compresses bodies of 1 KiB or more, measured in UTF-8 bytes" do
+      fixture.fetch("compression").each do |example|
+        state = example["state_char"] * example["state_length"]
+        client.system_one(state: state, questions: { q: Typesafe::SDK.noul("?") })
+        request = http.requests.last
+        expect(request.content_encoding).to eq(example["content_encoding"])
+        expect(request.body["state"] == state).to eq(example["state_received"])
+      end
+    end
   end
 
   it "forwards extension fields and exposes successful response metadata" do
@@ -26,10 +157,11 @@ RSpec.describe "Official JS 0.6.0 parity" do
     expect(adapter).to receive(:request) do |**request|
       expect(request[:url]).to eq(fixture.dig("request", "url"))
       expect(request[:method].to_s.upcase).to eq(fixture.dig("request", "method"))
-      expect(JSON.parse(request[:body])).to eq(fixture.dig("request", "body"))
+      expected = fixture.dig("request", "body").merge("state" => { "document" => "example" })
+      expect(JSON.parse(request[:body])).to eq(expected)
       response
     end
-    client = Typesafe::SDK::Client.new(api_key: "test", http: adapter)
+    client = Typesafe::SDK::Client.new(api_key: "test", http: adapter, compression: false)
     result = client.system_one(state: { document: "example" }, questions: fixture["questions"],
                                extra_body: { future_option: nil, nested: { enabled: true } }, with_response: true)
     expect(result.data).to be_a(Typesafe::SDK::SystemOneResult)
@@ -46,7 +178,11 @@ RSpec.describe "Official JS 0.6.0 parity" do
     wire.fetch("answers").each do |name, fields|
       answer = result[name]
       expect(result[name.to_sym]).to equal(answer)
-      fields.each { |field, value| expect(answer.public_send(field)).to eq(value) }
+      expect(answer.to_h).to eq(fields)
+      fields.each do |field, value|
+        actual = answer.public_send(field)
+        expect(actual.respond_to?(:to_h) && value.is_a?(Hash) ? actual.to_h : actual).to eq(value)
+      end
     end
   end
 

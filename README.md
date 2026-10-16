@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A community-maintained Ruby client for [TypeSafe AI](https://typesafe.ai), with typed answer
-objects, retries, timeouts, cancellation, and configurable logging.
+objects, image assets, retries, timeouts, cancellation, request compression, and configurable logging.
 
 TypeSafe's Jev model evaluates state against questions defined by your application. It returns
 structured decisions that your code can use for classification, ranking, and routing.
@@ -13,10 +13,10 @@ Read the [official introduction](https://docs.typesafe.ai/introduction) for the 
 
 **Unofficial:** this project is not affiliated with, endorsed by, or supported by TypeSafe AI.
 It targets the official [JavaScript SDK](https://github.com/typesafe-ai/typesafe-sdk-js)
-**0.6.0**. Official [JavaScript and Python SDKs](https://docs.typesafe.ai/sdk) are maintained
+**0.7.0**. Official [JavaScript and Python SDKs](https://docs.typesafe.ai/sdk) are maintained
 by TypeSafe AI.
 
-**Version:** this README documents Ruby **0.6.0.1**, targeting JS **0.6.0**.
+**Version:** this README documents Ruby **0.7.0**, targeting JS **0.7.0**.
 Ruby-only corrections add a fourth version component. Check
 [RubyGems](https://rubygems.org/gems/typesafe-sdk-ruby) and
 [GitHub releases](https://github.com/afurm/typesafe-sdk-ruby/releases) for published versions;
@@ -76,6 +76,7 @@ puts response.usage.input_tokens
 | `noul` | A yes/no judgment | `noul`: probability of yes, from 0 to 1 |
 | `choice` | Selecting one named option | `choice`, `probabilities`, `confidence` |
 | `score` | Rating against ordered descriptions | `score`, `legend`, `probabilities`, `confidence` |
+| `box` | Locating something in an image ([Images](#images)) | `box` (`top`, `bottom`, `left`, `right`), `confidence` |
 
 Mix question types in a single call. Each question is evaluated against the same state,
 independently of the other questions. Put the meaning in the instructions and criteria;
@@ -124,16 +125,112 @@ See [structured questions](https://docs.typesafe.ai/primitives/advanced) for mor
 
 From Ruby **0.6.0.1**, builders and raw question hashes are checked before sending:
 
-- State must be a string, object, or array; `nil` is rejected, while `""`, `{}`, and `[]` are allowed.
-- Noul needs instructions or at least one non-nil true/false outcome description.
+- State must be a string, object, array, or image; `nil` is rejected, while `""`, `{}`, and `[]` are allowed.
+- Noul needs instructions or at least one non-nil true/false outcome description; its criteria,
+  when given, must be a Hash (from 0.7.0).
 - Score needs **2–10** levels. A nil level is rejected; use `""` explicitly to keep an
   undescribed position. The SDK never drops or renumbers levels.
 - Choice needs **1–255** options. Nil descriptions remain valid for choice labels.
 - Question names must not be empty strings.
 
 Failures raise `Typesafe::SDK::TypeSafeError` without an HTTP request. These checks address
-request shapes reported as rejected by the API, even though JS 0.6.0 accepts them locally.
+request shapes reported as rejected by the API. JS 0.7.0 now rejects nil state and empty noul
+questions too; the score and choice bounds, nil score levels, and empty names remain Ruby-only checks.
 See the [upstream issue audit](docs/UPSTREAM_ISSUES.md) for evidence and limitations.
+
+From Ruby **0.7.0**, as in JS 0.7.0, non-finite floats such as `Float::NAN` are sent as the
+strings `"NaN"`, `"Infinity"`, and `"-Infinity"`, because JSON cannot represent them. Every answer
+also responds to `to_h`, which returns all of its fields, including ones this SDK doesn't model.
+Usage token counts are `nil` when the API doesn't report them.
+
+## Images
+
+Added in Ruby **0.7.0**. Create an image with `Typesafe::SDK.image` from file bytes (a binary
+`String`), a `Pathname` (read when the request is sent), or an IO (read immediately), or with
+`Typesafe::SDK::Image.from_base64` from base64 text. Images must be PNG or JPEG. The API detects
+the format from the file bytes and rejects other formats, such as WebP and GIF, with a
+`BadRequestError`. You can use an image in a request in three ways, and you can combine them.
+
+Image support is an experimental API feature. Opt in by sending the
+`TypeSafe-Danger-Zone-Images: true` header for a client, or per call with `headers:`:
+
+```ruby
+client = Typesafe::SDK::Client.new(default_headers: { "TypeSafe-Danger-Zone-Images" => "true" })
+```
+
+**Place the image in the content.** Put it anywhere in `state`, question instructions, or criteria:
+
+```ruby
+require "pathname"
+
+photo = Typesafe::SDK.image(Pathname("returns/RMA-1042.jpg"))
+response = client.system_one(
+  state: { claim: "The mug arrived with a chipped rim.", photo: photo },
+  questions: {
+    damaged: Typesafe::SDK.noul("Is the product in the photo damaged?"),
+    severity: Typesafe::SDK.score("How severe is the damage?", %w[none cosmetic unusable]),
+  },
+)
+puts response[:damaged].noul, response[:severity].score
+```
+
+**Write the image into text with `with_assets`.** Ruby has no tagged template literals, so pass
+the text and images as separate arguments, in order; other values are converted with `to_s`.
+`join_assets` joins a list like `Array#join`, with `","` as the default separator, as in
+JavaScript's `withAssets.join`:
+
+```ruby
+upload = Typesafe::SDK.image(params[:photo].read)
+catalog = Typesafe::SDK.image(Pathname("catalog/mug.png"))
+uploads = params[:photos].map { |file| Typesafe::SDK.image(file.read) }
+
+response = client.system_one(
+  state: Typesafe::SDK.with_assets("The seller uploaded ", Typesafe::SDK.join_assets(uploads, ", "), "."),
+  questions: {
+    same_product: Typesafe::SDK.noul(Typesafe::SDK.with_assets("Does ", upload, " show the product in ", catalog, "?")),
+  },
+)
+```
+
+Each image is sent once, however many times it is used. Plain string interpolation, such as
+`"Compare #{upload}"`, writes only the image's reference, so the call raises `TypeSafeError`
+before the request is sent.
+
+**Choose your own references with `assets:`.** Pass images keyed by names of your choice, then
+use those names in plain strings, such as prompts stored in configuration:
+
+```ruby
+response = client.system_one(
+  state: "A customer returned <delivered>. The catalog photo is <catalog>.",
+  questions: { matches: Typesafe::SDK.noul("Is <delivered> the product shown in <catalog>?") },
+  assets: {
+    "<delivered>" => Typesafe::SDK.image(File.binread("returns/RMA-1042.jpg")),
+    "<catalog>" => Typesafe::SDK.image(Pathname("catalog/mug.png")),
+  },
+)
+```
+
+Use distinct delimiters, such as `<delivered>`, so names don't match ordinary text. An image in
+`assets:` that also appears in content or `with_assets` text is written there under its name.
+Every name in `assets:` must appear in the request; otherwise the call raises `TypeSafeError`
+before sending.
+
+**Locate something with `box`.** A box question locates what its instructions describe. The
+answer's `box` holds the edges as fractions of the image's height (`top`, `bottom`) and width
+(`left`, `right`). Its `confidence` is `nil` when the API doesn't report one. Use the
+`jev-preview` model for box questions:
+
+```ruby
+response = client.system_one(
+  state: Typesafe::SDK.image(Pathname("returns/RMA-1042.jpg")),
+  questions: { damage: Typesafe::SDK.box("The damaged area of the product") },
+  model: "jev-preview",
+)
+box = response[:damage].box
+puts [box.top, box.bottom, box.left, box.right].inspect
+```
+
+Requests with images are sent as `multipart/form-data`, with each image's file bytes in its own part.
 
 ## Using confidence
 
@@ -162,6 +259,7 @@ construction. Error messages do not include the key.
 | `base_url:` | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` |
 | `default_model:` | `TYPESAFE_DEFAULT_MODEL` | `jev-latest` |
 | `log_level:` | `TYPESAFE_LOG_LEVEL` | `warn` |
+| `compression:` | None | `:zstd` when `zstd-ruby` is installed, otherwise `false` |
 
 ```ruby
 client = Typesafe::SDK::Client.new(
@@ -170,6 +268,19 @@ client = Typesafe::SDK::Client.new(
   log_level: :info, # :debug, :info, :warn, :error, or :off
   default_headers: { "X-My-App" => "support" },
 )
+```
+
+### Request compression
+
+Added in Ruby **0.7.0**. When the optional [`zstd-ruby`](https://rubygems.org/gems/zstd-ruby) gem
+is available (add `gem "zstd-ruby"` to your Gemfile), the client compresses request bodies of
+1 KiB or more with zstd, which reduces upload size and time, especially for large states and
+images. Smaller bodies are sent uncompressed. Without the gem, all bodies are sent uncompressed;
+`compression: :zstd` then raises `TypeSafeError`. Pass `compression: false` to send all bodies
+uncompressed, for example to an API that doesn't accept compressed requests:
+
+```ruby
+client = Typesafe::SDK::Client.new(compression: false)
 ```
 
 `jev-latest` is a moving alias. For reproducible deployments, select an explicit model from
@@ -239,6 +350,10 @@ Errors reach your code after any configured retries. All SDK errors inherit from
 | `APITimeoutError` | Subclass of `APIConnectionError`; exposes `timeout_ms` |
 | `APIUserAbortError` | Caller cancellation; never retried |
 
+From Ruby 0.7.0, when an HTML page from Cloudflare answers instead of the API, for example because
+its firewall matched text such as a shell command in `state`, the error message says so and
+includes the `cf-ray` ID to report to TypeSafe support. The error class and `body` are unchanged.
+
 ## Response metadata and additional fields
 
 Added for Ruby **0.6.0.1**:
@@ -292,7 +407,9 @@ end
 
 The default logger writes to `$stderr` with a `[typesafe-ai]` prefix. `info` includes request
 summaries; `debug` adds redacted credential headers and request/response bodies. Bodies may
-contain application data and are **not** redacted.
+contain application data and are **not** redacted. Image bytes are not logged; requests show each
+image's multipart part name. From Ruby 0.7.0, `x-api-key` values are always fully masked, and
+authorization headers keep only an alphabetic scheme, such as `Bearer`, that a credential follows.
 
 From Ruby 0.6.0.1, standard Ruby `Logger` and `Rails.logger` also accept debug details:
 
@@ -316,6 +433,10 @@ application if your Ruby version does not provide it by default.
 | `retry: { maxRetries: 0 }` | `retry_policy: { max_retries: 0 }` |
 | `.withResponse()` | `with_response: true` (Ruby 0.6.0.1+) |
 | `AbortController` | `Typesafe::SDK::Signal` |
+| `image(blob)`, `Image.fromBase64(text)` | `Typesafe::SDK.image(bytes_or_pathname)`, `Typesafe::SDK::Image.from_base64(text)` |
+| `` withAssets`Compare ${a} with ${b}` `` | `Typesafe::SDK.with_assets("Compare ", a, " with ", b)` |
+| `withAssets.join(images, ", ")` | `Typesafe::SDK.join_assets(images, ", ")` |
+| `compression: false` | `compression: false` |
 | `answers.category` | `response[:category]` or `response.answers["category"]` |
 
 Ruby calls are synchronous and return Ruby answer objects. They do not provide TypeScript

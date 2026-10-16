@@ -15,7 +15,7 @@ module Typesafe
     # Client for the TypeSafe AI API.
     class Client
       attr_reader :base_url, :default_model, :log_level, :logger, :retry, :timeout,
-                  :default_headers, :models
+                  :default_headers, :compression, :models
 
       # Create a client for the TypeSafe AI API.
       #
@@ -30,11 +30,15 @@ module Typesafe
       # @param retry_policy [Hash, nil] overrides for {Retry::DEFAULT_RETRY_POLICY}.
       # @param timeout [Float, nil] timeout per attempt in seconds. Default: 10.
       # @param default_headers [Hash, nil] additional request headers.
+      # @param compression [Symbol, false, nil] request body compression, sent as `Content-Encoding`.
+      #   Default: `:zstd` when the optional `zstd-ruby` gem can be loaded, otherwise `false`.
+      #   Bodies under 1 KiB are always sent uncompressed.
       # @param http [Object] HTTP adapter responding to `request`. Default: {HTTP}.
-      # @raise [TypeSafeError] the API key is missing or configuration is invalid.
+      # @raise [TypeSafeError] the API key is missing, configuration is invalid, or zstd
+      #   compression is requested without the `zstd-ruby` gem.
       def initialize(api_key: nil, base_url: nil, default_model: nil, log_level: nil,
                      logger: nil, retry_policy: nil, timeout: nil, default_headers: nil,
-                     http: nil, env: ::ENV)
+                     compression: nil, http: nil, env: ::ENV)
         @api_key = validate_api_key(api_key.nil? ? env[ENV::API_KEY] : api_key)
 
         @base_url = strip_trailing_slashes(
@@ -48,21 +52,30 @@ module Typesafe
         @retry = resolve_retry_policy(Retry::DEFAULT_RETRY_POLICY, retry_policy)
         @timeout = assert_positive("timeout", timeout || Retry::DEFAULT_TIMEOUT_S)
         @default_headers = (default_headers || {}).dup.freeze
+        @compression = Compression.resolve(compression)
         @http = http || HTTP.new
         @models = Resources::Models.new(self)
         @request_count = 0
       end
 
-      # Answer named questions about text or structured state.
+      # Answer named questions about text, structured state, or images.
       #
-      # @param state [String, Hash, Array] the content to evaluate.
+      # Images in `state`, question content, or {SDK.with_assets} text are sent under their
+      # references; requests with images are sent as `multipart/form-data`.
+      #
+      # @param state [String, Hash, Array, Image, TextWithAssets] the content to evaluate.
       # @param questions [Hash{Symbol, String => Hash}] nonempty questions keyed by name.
       # @param model [String, nil] model override; omitted values inherit `default_model`.
+      # @param assets [Hash{String => Image}, nil] images keyed by names of your choice, matched
+      #   literally in strings within `state`, question instructions, or criteria. Every name must
+      #   appear in the request.
       # @param extra_body [Hash] additional JSON fields; named request arguments take precedence.
       # @param with_response [Boolean] return data with HTTP metadata and request ID.
       # @param options [Hash] per-call `timeout`, `retry_policy`, `headers`, and `signal` settings.
       # @return [SystemOneResult, WithResponse] answers keyed by question name, with model and token usage.
-      # @raise [TypeSafeError] state or questions violate the locally checked API constraints.
+      # @raise [TypeSafeError] state or questions violate the locally checked API constraints,
+      #   the request holds a cycle, a string holds the reference of an image not attached to the
+      #   request, a name in `assets` doesn't appear in the request, or an image can't be read.
       # @raise [APIError] the server returns a non-2xx response after retries.
       # @raise [APIConnectionError] the request cannot connect or times out after retries.
       # @raise [APIUserAbortError] the caller cancels the request.
@@ -73,18 +86,27 @@ module Typesafe
       #     questions: { billing: Typesafe::SDK.noul("Is this about billing?") },
       #   )
       #   response[:billing].noul # => 0.93
-      def system_one(state:, questions:, model: nil, extra_body: {}, with_response: false, **options)
+      def system_one(state:, questions:, model: nil, assets: nil, extra_body: {}, with_response: false,
+                     **options)
         Questions.validate_state!(state)
         Questions.validate!(questions)
-        body = extra_body.transform_keys(&:to_s).merge(
+        named = Assets.normalize(assets)
+        request_body = extra_body.transform_keys(&:to_s).merge(
           "state" => state, "questions" => questions, "model" => model || @default_model
         )
+        # Serialized now, so changes to the request after this call don't change what is sent.
+        json, sent = Assets.serialize_request(request_body, named)
+        payload = JSON.parse(json)
+        body = sent.nil? ? payload : -> { Assets.encode(payload, sent) }
         response = request(:post, "/v1/systemone", body: body, **options)
         result = SystemOneResult.new(response.body)
         with_response ? WithResponse.new(result, response) : result
       end
 
       # Send a request and parse its response body. Internal; used by API resources.
+      #
+      # `body` is a JSON-ready object, or a callable returning one or an {MultipartBody},
+      # called once before the first attempt.
       #
       # @return [Response] the parsed response, with `body`, `status`, `headers`, and `request_id`.
       def request(method, path, body: nil, headers: {}, timeout: nil, retry_policy: nil,
@@ -251,27 +273,29 @@ module Typesafe
       # Retry eligible failures, logging attempt summaries at `info` and details at `debug`.
       def fetch_with_retries(tag, req)
         url = "#{@base_url}#{req[:path]}"
-        # User-supplied headers go first so they can't clobber auth or the JSON content type.
+        multipart, payload, encoded, encoding, body = prepare_body(tag, req)
+        # User-supplied headers go first so they can't clobber auth, the content type, or the encoding.
         headers = merge_headers(req[:headers], {
                                   "Authorization" => "Bearer #{@api_key}",
                                   "Accept" => "application/json",
                                   "User-Agent" => "typesafe-sdk-ruby/#{VERSION}",
                                   "X-TypeSafe-SDK" => "typesafe-sdk-ruby/#{VERSION}",
                                   "X-TypeSafe-Runtime" => "ruby/#{RUBY_VERSION} (#{RUBY_PLATFORM})",
-                                  "Content-Type" => req[:body].nil? ? nil : "application/json",
+                                  "Content-Type" => multipart&.content_type ||
+                                                    (encoded.nil? ? nil : "application/json"),
+                                  "Content-Encoding" => (encoding.to_s if encoding),
                                   "X-TypeSafe-Retry-Count" => nil
                                 })
-        payload = req[:body].nil? ? nil : JSON.generate(req[:body])
 
         attempt = 0
         loop do
           retries_left = req[:retry][:max_retries] - attempt
           attempt_headers = attempt.zero? ? headers : headers.merge("X-TypeSafe-Retry-Count" => attempt.to_s)
-          @logger.debug("#{tag} -> #{url}", headers: Redaction.redact_headers(attempt_headers), body: req[:body])
+          @logger.debug("#{tag} -> #{url}", headers: Redaction.redact_headers(attempt_headers), body: payload)
 
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           begin
-            response = attempt_request(tag, url, req[:method], attempt_headers, payload, req)
+            response = attempt_request(tag, url, req[:method], attempt_headers, body, req)
           rescue APIUserAbortError
             raise
           rescue APIConnectionError => e
@@ -294,6 +318,26 @@ module Typesafe
           back_off(tag, attempt, retries_left, response.status.to_s, response.headers, req)
           attempt += 1
         end
+      end
+
+      # Resolve, encode, and compress the body once; every attempt sends the same bytes.
+      # The logs show the uncompressed payload.
+      def prepare_body(tag, req)
+        resolved = req[:body]
+        if resolved.respond_to?(:call)
+          req[:signal]&.check!
+          resolved = resolved.call
+          if req[:signal]&.canceled?
+            @logger.info("#{tag} aborted by caller while reading assets")
+            raise APIUserAbortError
+          end
+        end
+        multipart = resolved.is_a?(MultipartBody) ? resolved : nil
+        payload = multipart ? multipart.payload : resolved
+        encoded = multipart&.content || (payload.nil? ? nil : JSON.generate(payload))
+        encoding = encoded && encoded.bytesize >= Compression::MIN_COMPRESSED_BODY_BYTES ? @compression : false
+        body = encoding ? Compression.compress(encoded) : encoded
+        [multipart, payload, encoded, encoding, body]
       end
 
       def retryable_connection_error?(error, policy)

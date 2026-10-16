@@ -140,4 +140,30 @@ RSpec.describe "Native HTTP reliability" do
       expect(body).to include("state" => { "doc" => "hello" }, "model" => "jev-latest")
     end
   end
+
+  it "sends a zstd multipart body with its boundary and resends the same bytes on retry" do
+    skip "zstd-ruby is not installed" unless Typesafe::SDK::Compression.available?
+    received = []
+    handler = lambda do |socket, _, headers, body|
+      received << [headers["content-type"], headers["content-encoding"], body.b]
+      if received.length == 1
+        send_json(socket, {}, status: 503)
+      else
+        send_json(socket, { model: "jev-latest", answers: {}, usage: {} })
+      end
+    end
+    with_http_server(handler) do |url|
+      client_for(url, retry_policy: { max_retries: 1, backoff_initial_ms: 0, backoff_max_ms: 0 }).system_one(
+        state: Typesafe::SDK.image("P" * 1024), questions: { q: Typesafe::SDK.noul("?") }
+      )
+    end
+    expect(received.length).to eq(2)
+    content_type, encoding, body = received.first
+    boundary = content_type[%r{\Amultipart/form-data; boundary=(\h{32})\z}, 1]
+    expect(encoding).to eq("zstd")
+    decoded = Zstd.decompress(body)
+    expect(decoded).to end_with("\r\n--#{boundary}--\r\n")
+    expect(decoded).to include("P" * 1024)
+    expect(received.last).to eq(received.first)
+  end
 end

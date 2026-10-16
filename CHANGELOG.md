@@ -6,6 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 Versions follow the official JavaScript SDK, with a fourth numeric component for Ruby-only
 corrections. See [RELEASING.md](docs/RELEASING.md).
 
+## [0.7.0] - 2026-10-16
+
+Compatibility target: official JavaScript SDK 0.7.0, commit `b844cd1`.
+
+### Added
+
+- Images, an experimental API feature enabled with the `TypeSafe-Danger-Zone-Images: true`
+  header: create them with `Typesafe::SDK.image` from file bytes, a `Pathname`, or an IO, or
+  with `Typesafe::SDK::Image.from_base64`. Place them in `state`, question instructions, or
+  criteria; join them into text with `Typesafe::SDK.with_assets` and `Typesafe::SDK.join_assets`;
+  or reference them by names you choose in `assets:`. Requests with images are sent as
+  `multipart/form-data`, with each image's bytes in its own part.
+- `box` questions and `BoxResponse` answers, which locate what their instructions describe in an
+  image; use them with the `jev-preview` model.
+- zstd compression for request bodies of 1 KiB or more when the optional `zstd-ruby` gem is
+  available; pass `compression: false` to send bodies uncompressed.
+- `#to_h` on every answer, returning all fields the API sent, including unmodeled ones.
+
+### Changed
+
+- Non-finite floats (`NaN`, `Infinity`, `-Infinity`) in a request are sent as strings, as
+  JS 0.7.0 does, instead of raising `JSON::GeneratorError` (upstream #17).
+- Noul questions whose `criteria` is not a Hash raise `TypeSafeError` before sending.
+- Usage token counts are documented as possibly `nil` when the API doesn't report them.
+- A request containing a circular reference raises `TypeSafeError` instead of a JSON error.
+- Custom `http:` adapters can receive binary bodies: `multipart/form-data` for requests with
+  images, and zstd-compressed bodies of 1 KiB or more when `zstd-ruby` is loaded. Send the body
+  unchanged with the given headers, or pass `compression: false` to keep JSON bodies uncompressed.
+
+### Fixed
+
+- Debug logs no longer show an `x-api-key` value or a spaceless credential as an
+  authorization scheme; only an alphabetic scheme followed by a credential is kept
+  (upstream #18).
+- HTML error pages from Cloudflare raise errors whose message names the edge block and its
+  `cf-ray` ID instead of quoting the HTML (upstream #15). The error classes are unchanged.
+
 ## [0.6.0.1] - 2026-09-21
 
 Compatibility target: official JavaScript SDK 0.6.0, commit `66880cc`.
