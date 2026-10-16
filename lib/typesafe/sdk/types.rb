@@ -13,7 +13,22 @@ module Typesafe
       end
     end
 
-    # Token usage for a request.
+    # An answer, keeping every field the API returned, including fields not modeled here.
+    class Answer
+      attr_reader :type
+
+      def initialize(data)
+        @data = data
+        @type = data["type"]
+      end
+
+      # The answer as the API returned it, with string keys.
+      def to_h
+        @data.dup
+      end
+    end
+
+    # Token usage for a request. Each count is `nil` when the API did not report it.
     class Usage
       attr_reader :input_tokens, :output_tokens
 
@@ -24,21 +39,21 @@ module Typesafe
     end
 
     # A yes/no answer.
-    class NoulResponse
-      attr_reader :type, :noul
+    class NoulResponse < Answer
+      attr_reader :noul
 
       def initialize(data)
-        @type = data["type"]
+        super
         @noul = data["noul"]
       end
     end
 
     # A selected label with its probabilities.
-    class ChoiceResponse
-      attr_reader :type, :choice, :confidence, :probabilities
+    class ChoiceResponse < Answer
+      attr_reader :choice, :confidence, :probabilities
 
       def initialize(data)
-        @type = data["type"]
+        super
         @choice = data["choice"]
         @confidence = data["confidence"]
         @probabilities = data["probabilities"]
@@ -46,15 +61,46 @@ module Typesafe
     end
 
     # An expected score with its rubric and probabilities.
-    class ScoreResponse
-      attr_reader :type, :score, :confidence, :legend, :probabilities
+    class ScoreResponse < Answer
+      attr_reader :score, :confidence, :legend, :probabilities
 
       def initialize(data)
-        @type = data["type"]
+        super
         @score = data["score"]
         @confidence = data["confidence"]
         @legend = data["legend"]
         @probabilities = data["probabilities"]
+      end
+    end
+
+    # A box's edges as fractions of the image's height (`top`, `bottom`) and width
+    # (`left`, `right`), each from zero to one.
+    class BoxCoordinates
+      attr_reader :top, :bottom, :left, :right
+
+      def initialize(data)
+        @top = data["top"]
+        @bottom = data["bottom"]
+        @left = data["left"]
+        @right = data["right"]
+      end
+
+      def to_h
+        { "top" => top, "bottom" => bottom, "left" => left, "right" => right }
+      end
+    end
+
+    # The answer to a box question.
+    class BoxResponse < Answer
+      # Where the instructions' subject is in the image, or `nil` when absent.
+      attr_reader :box
+      # Confidence in the box, from zero to one, or `nil` when the API didn't report it.
+      attr_reader :confidence
+
+      def initialize(data)
+        super
+        @box = data["box"].is_a?(Hash) ? BoxCoordinates.new(data["box"]) : nil
+        @confidence = data["confidence"]
       end
     end
 
@@ -63,7 +109,8 @@ module Typesafe
       CLASSES = {
         "noul" => NoulResponse,
         "choice" => ChoiceResponse,
-        "score" => ScoreResponse
+        "score" => ScoreResponse,
+        "box" => BoxResponse
       }.freeze
 
       module_function

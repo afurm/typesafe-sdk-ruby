@@ -66,7 +66,8 @@ module Typesafe
       # @param method [Symbol] `:get` or `:post`.
       # @param url [String] absolute URL.
       # @param headers [Hash{String => String}] request headers.
-      # @param body [String, nil] JSON-encoded request body.
+      # @param body [String, nil] encoded request body: JSON, or `multipart/form-data` when the
+      #   request has images, compressed when `Content-Encoding` is set. Send it as-is.
       # @param timeout [Numeric] timeout in seconds.
       # @param signal [Signal, nil] cancellation handle.
       # @return [Response]

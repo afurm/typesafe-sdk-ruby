@@ -76,20 +76,28 @@ module Typesafe
     # Credential headers that retain a key suffix for identification.
     module Redaction
       KEY_HEADERS = %w[authorization proxy-authorization x-api-key].freeze
+      # Headers whose values may start with an authentication scheme such as `Bearer`.
+      SCHEME_HEADERS = %w[authorization proxy-authorization].freeze
       OPAQUE_HEADERS = %w[cookie set-cookie].freeze
+      # An alphabetic scheme followed by a nonempty credential (RFC 9110 §11.4).
+      SCHEMED = /\A([A-Za-z]+)[ \t]+(\S.*)\z/m
 
       module_function
 
-      # Mask a key, preserving its scheme and the last four characters of secrets longer than eight.
-      def redact_key(value)
-        scheme, secret = value.include?(" ") ? value.split(/\s+/, 2) : [nil, value]
-        tail = secret && secret.length > 8 ? secret[-4..] : ""
-        "#{"#{scheme} " if scheme}***#{tail}"
+      # Mask a key, keeping the last four characters of secrets longer than eight. An alphabetic
+      # leading scheme, such as `Bearer`, is kept only when `scheme` is true and a credential
+      # follows it; otherwise the whole value is masked, so a secret is never shown as a scheme.
+      def redact_key(value, scheme: true)
+        value = value.to_s
+        match = scheme ? SCHEMED.match(value) : nil
+        prefix, secret = match ? ["#{match[1]} ", match[2].strip] : ["", value.strip]
+        tail = secret.length > 8 ? secret[-4..] : ""
+        "#{prefix}***#{tail}"
       end
 
       def redact(name, value)
         lower = name.downcase
-        return redact_key(value) if KEY_HEADERS.include?(lower)
+        return redact_key(value, scheme: SCHEME_HEADERS.include?(lower)) if KEY_HEADERS.include?(lower)
         return "***" if OPAQUE_HEADERS.include?(lower)
 
         value

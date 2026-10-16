@@ -19,3 +19,21 @@ abort "Missing typed answers" unless result.data[:billing].is_a?(Typesafe::SDK::
                                      result.data[:category].is_a?(Typesafe::SDK::ChoiceResponse) &&
                                      result.data[:urgency].is_a?(Typesafe::SDK::ScoreResponse)
 puts "Live smoke test passed; model=#{result.data.model}, request_id=#{result.request_id}"
+
+# Images are experimental; TYPESAFE_LIVE_IMAGES=1 adds one more billable request with a box question.
+if ENV["TYPESAFE_LIVE_IMAGES"] == "1"
+  # A 512x512 white PNG with a red square from 128 to 384 pixels on each axis.
+  square = Typesafe::SDK::Image.from_base64(
+    "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIAAQMAAADOtka5AAAABlBMVEX/////AADrWueTAAAAZ0lEQVR42u3MQQ0AAAgEoOtf" \
+    "WiM4N/1BABIAAAAAAAAAgGM1EAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKBQCAQCAQCgUAgEAgEAoFAIBAIBAKB" \
+    "QCD4DgAAAAAAAAAAlhrvN+HSAmCw9gAAAABJRU5ErkJggg=="
+  )
+  images = Typesafe::SDK::Client.new(log_level: :off, retry_policy: { max_retries: 0 }, timeout: 120,
+                                     default_headers: { "TypeSafe-Danger-Zone-Images" => "true" })
+  answer = images.system_one(state: square, questions: { square: Typesafe::SDK.box("The red square") },
+                             model: "jev-preview")[:square]
+  edges = answer.box&.to_h&.values || []
+  abort "Missing box answer" unless answer.is_a?(Typesafe::SDK::BoxResponse) && edges.length == 4 &&
+                                    edges.all? { |edge| edge.is_a?(Numeric) && edge.between?(0, 1) }
+  puts "Live image smoke test passed"
+end

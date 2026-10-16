@@ -15,7 +15,7 @@ Naming/FileName:
 
 # The client mirrors the JS SDK's option surface; keyword options are intentional.
 Metrics/ParameterLists:
-  Max: 10
+  Max: 11
 
 Metrics/MethodLength:
   Max: 45
